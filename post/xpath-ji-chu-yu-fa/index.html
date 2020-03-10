@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>xpath基础语法 | bibi</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://bibi520.github.io/favicon.ico?v=1583810322525">
+<link rel="stylesheet" href="https://bibi520.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="选取节点
+
+
+
+表达式
+描述
+实例
+
+
+
+
+nodename
+选取所有的nodename节点
+xpath('//div')
+
+
+/
+选取属于根节点的子节点
+xpath('/div')
+
+
+//
+选取当前的所有节点，不考虑位置
+xpath('..." />
+    <meta name="keywords" content="python" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://bibi520.github.io">
+        <img src="https://bibi520.github.io/images/avatar.png?v=1583810322525" class="site-logo">
+        <h1 class="site-title">bibi</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      温故而知新
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://bibi520.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">xpath基础语法</h2>
+            <div class="post-date">2020-03-10</div>
+            
+              <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/xpath-ji-chu-yu-fa.jpg')">
+              </div>
+            
+            <div class="post-content" v-pre>
+              <h4 id="选取节点">选取节点</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">表达式</th>
+<th style="text-align:center">描述</th>
+<th style="text-align:center">实例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">nodename</td>
+<td style="text-align:center">选取所有的nodename节点</td>
+<td style="text-align:center">xpath('//div')</td>
+</tr>
+<tr>
+<td style="text-align:left">/</td>
+<td style="text-align:center">选取属于根节点的子节点</td>
+<td style="text-align:center">xpath('/div')</td>
+</tr>
+<tr>
+<td style="text-align:left">//</td>
+<td style="text-align:center">选取当前的所有节点，不考虑位置</td>
+<td style="text-align:center">xpath('//div')</td>
+</tr>
+<tr>
+<td style="text-align:left">.</td>
+<td style="text-align:center">选取当前节点</td>
+<td style="text-align:center">xpath('./div')</td>
+</tr>
+<tr>
+<td style="text-align:left">@</td>
+<td style="text-align:center">选取符合属性的节点</td>
+<td style="text-align:center">xpath('//@src')</td>
+</tr>
+<tr>
+<td style="text-align:left">*</td>
+<td style="text-align:center">选取nodename所有节点</td>
+<td style="text-align:center">xpath('/div/*')</td>
+</tr>
+</tbody>
+</table>
+<h4 id="选取位置节点">选取位置节点</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">实例</th>
+<th style="text-align:center">结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">xpath('/div/img[1]')</td>
+<td style="text-align:center">选取div节点下的第一个img节点</td>
+</tr>
+<tr>
+<td style="text-align:left">xpath('/div/img[last()]')</td>
+<td style="text-align:center">选取div节点下最后一个img节点</td>
+</tr>
+<tr>
+<td style="text-align:left">xpath('/div/img[last()-1]')</td>
+<td style="text-align:center">选取div节点下的倒数第二个img节点</td>
+</tr>
+<tr>
+<td style="text-align:left">xpath('/div/img[positon() &lt; 3]')</td>
+<td style="text-align:center">选取div节点下前两个img节点</td>
+</tr>
+<tr>
+<td style="text-align:left">xpath('/div/img[@class]')</td>
+<td style="text-align:center">选取div节点下带有class属性的img节点</td>
+</tr>
+<tr>
+<td style="text-align:left">xpath('/div/img[@class=&quot;txt&quot;]')</td>
+<td style="text-align:center">选取div节点下class属性为txt的img节点</td>
+</tr>
+<tr>
+<td style="text-align:left">xpath('//div | //table')</td>
+<td style="text-align:center">选取所有的div和table节点</td>
+</tr>
+</tbody>
+</table>
+<h4 id="函数功能">函数功能</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">函数</th>
+<th style="text-align:center">实例</th>
+<th style="text-align:center">解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">starts-with</td>
+<td style="text-align:center">xpath('//div/[starts-with(@id,&quot;img&quot;)]')</td>
+<td style="text-align:center">选取id的值以img开头的所有div节点</td>
+</tr>
+<tr>
+<td style="text-align:left">contains</td>
+<td style="text-align:center">xpath('//div/[contains(@id,&quot;img&quot;)]')</td>
+<td style="text-align:center">选取id的值包含img的所有div节点</td>
+</tr>
+<tr>
+<td style="text-align:left">and</td>
+<td style="text-align:center">xpath('//div[contains(@id,&quot;img&quot;) and contains(@id,&quot;src&quot;)]')</td>
+<td style="text-align:center">选取id的值包含img和src所有div节点</td>
+</tr>
+<tr>
+<td style="text-align:left">text()</td>
+<td style="text-align:center">xpath('//div/[contains(text(),&quot;img&quot;)]')</td>
+<td style="text-align:center">选取节点文本包含img的所有div节点</td>
+</tr>
+</tbody>
+</table>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://bibi520.github.io/tag/KFO9vHR7Z/" class="tag">
+                    python
+                  </a>
+                
+              </div>
+            
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+
+
+
+
+  </body>
+</html>

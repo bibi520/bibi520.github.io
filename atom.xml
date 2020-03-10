@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://bibi520.github.io</id>
+    <title>bibi</title>
+    <updated>2020-03-10T03:19:20.001Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://bibi520.github.io"/>
+    <link rel="self" href="https://bibi520.github.io/atom.xml"/>
+    <subtitle>温故而知新</subtitle>
+    <logo>https://bibi520.github.io/images/avatar.png</logo>
+    <icon>https://bibi520.github.io/favicon.ico</icon>
+    <rights>All rights reserved 2020, bibi</rights>
+    <entry>
+        <title type="html"><![CDATA[xpath基础语法]]></title>
+        <id>https://bibi520.github.io/post/xpath-ji-chu-yu-fa/</id>
+        <link href="https://bibi520.github.io/post/xpath-ji-chu-yu-fa/">
+        </link>
+        <updated>2020-03-10T03:14:21.000Z</updated>
+        <content type="html"><![CDATA[<h4 id="选取节点">选取节点</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">表达式</th>
+<th style="text-align:center">描述</th>
+<th style="text-align:center">实例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">nodename</td>
+<td style="text-align:center">选取所有的nodename节点</td>
+<td style="text-align:center">xpath('//div')</td>
+</tr>
+<tr>
+<td style="text-align:left">/</td>
+<td style="text-align:center">选取属于根节点的子节点</td>
+<td style="text-align:center">xpath('/div')</td>
+</tr>
+<tr>
+<td style="text-align:left">//</td>
+<td style="text-align:center">选取当前的所有节点，不考虑位置</td>
+<td style="text-align:center">xpath('//div')</td>
+</tr>
+<tr>
+<td style="text-align:left">.</td>
+<td style="text-align:center">选取当前节点</td>
+<td style="text-align:center">xpath('./div')</td>
+</tr>
+<tr>
+<td style="text-align:left">@</td>
+<td style="text-align:center">选取符合属性的节点</td>
+<td style="text-align:center">xpath('//@src')</td>
+</tr>
+<tr>
+<td style="text-align:left">*</td>
+<td style="text-align:center">选取nodename所有节点</td>
+<td style="text-align:center">xpath('/div/*')</td>
+</tr>
+</tbody>
+</table>
+<h4 id="选取位置节点">选取位置节点</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">实例</th>
+<th style="text-align:center">结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">xpath('/div/img[1]')</td>
+<td style="text-align:center">选取div节点下的第一个img节点</td>
+</tr>
+<tr>
+<td style="text-align:left">xpath('/div/img[last()]')</td>
+<td style="text-align:center">选取div节点下最后一个img节点</td>
+</tr>
+<tr>
+<td style="text-align:left">xpath('/div/img[last()-1]')</td>
+<td style="text-align:center">选取div节点下的倒数第二个img节点</td>
+</tr>
+<tr>
+<td style="text-align:left">xpath('/div/img[positon() &lt; 3]')</td>
+<td style="text-align:center">选取div节点下前两个img节点</td>
+</tr>
+<tr>
+<td style="text-align:left">xpath('/div/img[@class]')</td>
+<td style="text-align:center">选取div节点下带有class属性的img节点</td>
+</tr>
+<tr>
+<td style="text-align:left">xpath('/div/img[@class=&quot;txt&quot;]')</td>
+<td style="text-align:center">选取div节点下class属性为txt的img节点</td>
+</tr>
+<tr>
+<td style="text-align:left">xpath('//div | //table')</td>
+<td style="text-align:center">选取所有的div和table节点</td>
+</tr>
+</tbody>
+</table>
+<h4 id="函数功能">函数功能</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:left">函数</th>
+<th style="text-align:center">实例</th>
+<th style="text-align:center">解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">starts-with</td>
+<td style="text-align:center">xpath('//div/[starts-with(@id,&quot;img&quot;)]')</td>
+<td style="text-align:center">选取id的值以img开头的所有div节点</td>
+</tr>
+<tr>
+<td style="text-align:left">contains</td>
+<td style="text-align:center">xpath('//div/[contains(@id,&quot;img&quot;)]')</td>
+<td style="text-align:center">选取id的值包含img的所有div节点</td>
+</tr>
+<tr>
+<td style="text-align:left">and</td>
+<td style="text-align:center">xpath('//div[contains(@id,&quot;img&quot;) and contains(@id,&quot;src&quot;)]')</td>
+<td style="text-align:center">选取id的值包含img和src所有div节点</td>
+</tr>
+<tr>
+<td style="text-align:left">text()</td>
+<td style="text-align:center">xpath('//div/[contains(text(),&quot;img&quot;)]')</td>
+<td style="text-align:center">选取节点文本包含img的所有div节点</td>
+</tr>
+</tbody>
+</table>
+]]></content>
+    </entry>
+</feed>
