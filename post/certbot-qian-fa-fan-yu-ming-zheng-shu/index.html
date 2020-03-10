@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" >
 
-<title>文章归档 | bibi</title>
+<title>certbot签发范域名证书 | bibi</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
@@ -18,7 +18,9 @@
 
 
 
-    <meta name="description" content="温故而知新">
+    <meta name="description" content="cerbot签发范域名证书，中途还要做一次txt解析
+certbot certonly --manual --email xxx@qq.com --server https://acme-v02.api.letsencrypt.org/di..." />
+    <meta name="keywords" content="linux" />
   </head>
   <body>
     <div id="app" class="main">
@@ -88,40 +90,47 @@
 
       <div class="main-container">
         <div class="content-container" data-aos="fade-up">
-          
+          <div class="post-detail">
+            <h2 class="post-title">certbot签发范域名证书</h2>
+            <div class="post-date">2020-03-10</div>
+            
+              <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/certbot-qian-fa-fan-yu-ming-zheng-shu.jpg')">
+              </div>
+            
+            <div class="post-content" v-pre>
+              <h5 id="cerbot签发范域名证书中途还要做一次txt解析">cerbot签发范域名证书，中途还要做一次txt解析</h5>
+<p><code>certbot certonly --manual --email xxx@qq.com --server https://acme-v02.api.letsencrypt.org/directory --agree-tos -d *.xx.com</code></p>
+<h4 id="续签如报一下错误">续签如报一下错误:</h4>
+<p>The manual plugin is not working; there may be problems with your existing configuration ......<br>
+.....<br>
+PluginError('An authentication script must be provided with --manual-auth-hook when using the manual plugin non-interactively.'</p>
+<h4 id="解决方式说白了就是重新申请">解决方式（说白了就是重新申请）</h4>
+<p><code>certbot certonly -d *.xxx.com --manual --preferred-challenges dns --server https://acme-v02.api.letsencrypt.org/directory</code></p>
 
-          <h2 class="archives-title">文章归档</h2>
-          <div class="archives-container">
+            </div>
             
-              <h2 class="year" data-aos="fade-in" data-aos-delay="500">2020</h2>
-              
+              <div class="tag-container">
                 
-                  <article class="post">
-                    <a href="https://bibi520.github.io/post/certbot-qian-fa-fan-yu-ming-zheng-shu/">
-                      <h2 class="post-title">
-                        certbot签发范域名证书
-                      </h2>
-                    </a>
-                  </article>
+                  <a href="https://bibi520.github.io/tag/vEd5oK3o7/" class="tag">
+                    linux
+                  </a>
                 
-              
-                
-                  <article class="post">
-                    <a href="https://bibi520.github.io/post/xpath-ji-chu-yu-fa/">
-                      <h2 class="post-title">
-                        xpath基础语法
-                      </h2>
-                    </a>
-                  </article>
-                
-              
+              </div>
             
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://bibi520.github.io/post/xpath-ji-chu-yu-fa/">
+                  <h3 class="post-title">
+                    xpath基础语法
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
           </div>
-
-          <div class="pagination-container">
-  
-  
-</div>
 
         </div>
       </div>
