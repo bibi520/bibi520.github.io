@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>helm搭建istio1.5 | bibi</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://bibi520.github.io/favicon.ico?v=1583911359602">
+<link rel="stylesheet" href="https://bibi520.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="准备好kubernetes和helm（搭建过程略过）
+1.下载istio安装包
+curl -L https://istio.io/downloadIstio | sh -
+2.安装istio所需的要的CRD(以为这个我开启了自动签发证书，所..." />
+    <meta name="keywords" content="istio" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://bibi520.github.io">
+        <img src="https://bibi520.github.io/images/avatar.png?v=1583911359602" class="site-logo">
+        <h1 class="site-title">bibi</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      温故而知新
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://bibi520.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">helm搭建istio1.5</h2>
+            <div class="post-date">2020-03-11</div>
+            
+              <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/helm-da-jian-istio15.jpg')">
+              </div>
+            
+            <div class="post-content" v-pre>
+              <h4 id="准备好kubernetes和helm搭建过程略过">准备好kubernetes和helm（搭建过程略过）</h4>
+<h4 id="1下载istio安装包">1.下载istio安装包</h4>
+<p><code>curl -L https://istio.io/downloadIstio | sh -</code></p>
+<h4 id="2安装istio所需的要的crd以为这个我开启了自动签发证书所以要把certmanager开启">2.安装istio所需的要的CRD(以为这个我开启了自动签发证书，所以要把certmanager开启)</h4>
+<p><code>helm install install/kubernetes/helm/istio-init --name istio-init --namespace istio-system --set certmanager.enabled=true</code></p>
+<h4 id="3安装sitio-cni网络插件">3.安装sitio-cni网络插件</h4>
+<p><code>helm install install/kubernetes/helm/istio-cni --name istio-cni --namespace kube-system</code></p>
+<h4 id="4配置kiali和grafana用户和密码-官方例子">4.配置kiali和grafana用户和密码, <a href="https://istio.io/docs/tasks/observability/kiali/">官方例子</a></h4>
+<pre><code class="language-apiVersion:">kind: Secret
+metadata:
+  name: kiali
+  namespace: istio-system
+  labels:
+    app: kiali
+type: Opaque
+data:
+  username: YWRtaW4=
+  passphrase: Y2hhbXBzYTg4OA==
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana
+  namespace: istio-system
+  labels:
+    app: grafana
+type: Opaque
+data:
+  username: YWRtaW4=
+  passphrase: Y2hhbXBzYTg4OA==
+</code></pre>
+<h4 id="5安装过istio这里设置好的参数可以到官网查看含义">5.安装过istio这里设置好的参数可以到<a href="https://istio.io/docs/reference/config/installation-options/">官网</a>查看含义</h4>
+<p><code>helm install install/kubernetes/helm/istio --name istio --namespace istio-system --set istio_cni.enabled=true --set global.disablePolicyChecks=false --set global.k8sIngress.enabled=true --set global.k8sIngress.enableHttps=true --set global.k8sIngress.gatewayName=ingressgateway --set security.citadelHealthCheck=true --set gateways.enabled=true --set gateways.istio-egressgateway.enabled=true --set gateways.istio-ingressgateway.enabled=true --set gateways.istio-ingressgateway.sds.enabled=true --set certmanager.enabled=true --set certmanager.email=txy@cztec.com --set grafana.enabled=true --set grafana.security.enabled=true --set grafana.security.usernameKey=username --set kiali.enabled=true --set grafana.security.passphraseKey=passphrase --set tracing.enabled=true --set prometheus.enabled=true</code></p>
+<h4 id="6签发范域名证书得先把域名解析到istio-ingressgateway服务的外部地址">6.签发范域名证书(得先把域名解析到istio-ingressgateway服务的外部地址)</h4>
+<pre><code>apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+ name: ingress-cert
+ namespace: istio-system
+spec:
+ secretName: ingress-cert
+ issuerRef:
+   name: letsencrypt
+   kind: ClusterIssuer
+ commonName: $INGRESS_DOMAIN
+ dnsNames:
+ - $INGRESS_DOMAIN
+ acme:
+   config:
+   - http01:
+       ingressClass: istio
+     domains:
+     - $INGRESS_DOMAIN
+</code></pre>
+<h4 id="检查签发成功的证书官方例子">检查签发成功的证书,<a href="https://istio.io/docs/tasks/traffic-management/ingress/ingress-certmgr/#getting-a-let-s-encrypt-certificate-issued-using-cert-manager">官方例子</a></h4>
+<p><code>kubectl get certificate</code><br>
+<img src="https://bibi520.github.io/post-images/1583908683044.jpg" alt="" loading="lazy"></p>
+<h4 id="7网关使用证书">7.网关使用证书</h4>
+<pre><code>apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: kiali-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 443
+      name: https-kiali
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      serverCertificate: sds
+      privateKey: sds
+      credentialName: kiali-ingress-cert
+    hosts:
+    - &quot;xxx.example.com&quot;
+</code></pre>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://bibi520.github.io/tag/79NQjqLie/" class="tag">
+                    istio
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://bibi520.github.io/post/docker-compose-ji-chu-yu-fa/">
+                  <h3 class="post-title">
+                    docker-compose基础语法
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>
