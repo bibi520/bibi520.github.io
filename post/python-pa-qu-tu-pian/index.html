@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" >
 
-<title>certbot签发范域名证书 | bibi</title>
+<title>python爬取实例1 | bibi</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
@@ -18,9 +18,13 @@
 
 
 
-    <meta name="description" content="cerbot签发范域名证书，中途还要做一次txt解析
-certbot certonly --manual --email xxx@qq.com --server https://acme-v02.api.letsencrypt.org/di..." />
-    <meta name="keywords" content="linux" />
+    <meta name="description" content="仅供学习参考
+import  requests,time,threading,os,random
+from lxml import etree
+from queue import Queue
+os.chdir('picture')
+head..." />
+    <meta name="keywords" content="python" />
   </head>
   <body>
     <div id="app" class="main">
@@ -91,28 +95,62 @@ certbot certonly --manual --email xxx@qq.com --server https://acme-v02.api.letse
       <div class="main-container">
         <div class="content-container" data-aos="fade-up">
           <div class="post-detail">
-            <h2 class="post-title">certbot签发范域名证书</h2>
-            <div class="post-date">2020-03-10</div>
+            <h2 class="post-title">python爬取实例1</h2>
+            <div class="post-date">2020-03-12</div>
             
-              <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/certbot-qian-fa-fan-yu-ming-zheng-shu.jpg')">
+              <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/python-pa-qu-tu-pian.jpg')">
               </div>
             
             <div class="post-content" v-pre>
-              <h5 id="cerbot签发范域名证书中途还要做一次txt解析">cerbot签发范域名证书，中途还要做一次txt解析</h5>
-<p><code>certbot certonly --manual --email xxx@qq.com --server https://acme-v02.api.letsencrypt.org/directory --agree-tos -d *.xx.com</code></p>
-<h4 id="续签如报一下错误">续签如报一下错误:</h4>
-<p>The manual plugin is not working; there may be problems with your existing configuration ......<br>
-.....<br>
-PluginError('An authentication script must be provided with --manual-auth-hook when using the manual plugin non-interactively.'</p>
-<h4 id="解决方式说白了就是重新申请">解决方式（说白了就是重新申请）</h4>
-<p><code>certbot certonly -d *.xxx.com --manual --preferred-challenges dns --server https://acme-v02.api.letsencrypt.org/directory</code></p>
+              <h4 id="仅供学习参考">仅供学习参考</h4>
+<pre><code>import  requests,time,threading,os,random
+from lxml import etree
+from queue import Queue
+os.chdir('picture')
+headers = {
+    'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE'
+}
+# 创建一个先进先出队列
+detail_url_queue = Queue()
+
+#  抓取图片地址并下载
+def get_picture(queue):
+    while not detail_url_queue.empty():
+        url = queue.get()
+        print(url)
+        html = requests.get(url,headers=headers)
+        html.encoding = 'gbk'
+        selector = etree.HTML(html.text)
+        pic = selector.xpath('//ul[@class=&quot;clearfix&quot;]//li//img//@src')
+        for i in pic:
+            href = &quot;http://pic.netbian.com&quot;+ i
+            content = requests.get(href,headers=headers).content
+            with open('{}.jpg'.format(random.random()),'wb') as p:
+                p.write(content)
+# 获取图片列表页
+def get_url(queue):
+    for i in range(1,5000):
+        queue.put(&quot;http://pic.netbian.com/4kdongman/index_{}.html&quot;.format(i))
+
+if __name__ == &quot;__main__&quot;:
+    start_time = time.time()
+    t = threading.Thread(target=get_url(detail_url_queue)) #开启一个线程去抓取图片列表页
+    t2 = threading.Thread(target=get_picture(detail_url_queue)) #开启一个线程去抓取图片
+
+    t.start()
+    t2.start()
+
+    t.join()
+    t2.join()
+    print(&quot;last time: {} s&quot;.format(time.time()-start_time))
+</code></pre>
 
             </div>
             
               <div class="tag-container">
                 
-                  <a href="https://bibi520.github.io/tag/vEd5oK3o7/" class="tag">
-                    linux
+                  <a href="https://bibi520.github.io/tag/KFO9vHR7Z/" class="tag">
+                    python
                   </a>
                 
               </div>
@@ -120,9 +158,9 @@ PluginError('An authentication script must be provided with --manual-auth-hook w
             
               <div class="next-post">
                 <div class="next">下一篇</div>
-                <a href="https://bibi520.github.io/post/xpath-ji-chu-yu-fa/">
+                <a href="https://bibi520.github.io/post/linux-ming-ling/">
                   <h3 class="post-title">
-                    xpath基础语法
+                    linux命令
                   </h3>
                 </a>
               </div>

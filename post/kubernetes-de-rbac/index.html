@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" >
 
-<title>linux | bibi</title>
+<title>kubernetes的RBAC | bibi</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
@@ -18,7 +18,13 @@
 
 
 
-    <meta name="description" content="温故而知新">
+    <meta name="description" content="创建一个test只有get权限
+
+生成用户私钥
+(umask 077; openssl genrsa -out test.key 2048)
+生成用户证书
+openssl req -new -key test.key -out test.c..." />
+    <meta name="keywords" content="kubernetes" />
   </head>
   <body>
     <div id="app" class="main">
@@ -88,53 +94,52 @@
 
       <div class="main-container">
         <div class="content-container" data-aos="fade-up">
-          <h2 class="current-tag">标签: linux</h2>
-          
-            <article class="post-item">
-              <div class="left">
-                <a href="https://bibi520.github.io/post/linux-ming-ling/">
-                  <h2 class="post-title">linux命令</h2>
-                </a>
-                <div class="post-date">
-                  2020-03-12
-                </div>
-                <div class="post-abstract">
-                  
-                </div>
+          <div class="post-detail">
+            <h2 class="post-title">kubernetes的RBAC</h2>
+            <div class="post-date">2020-03-18</div>
+            
+              <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/kubernetes-de-rbac.jpg')">
               </div>
-              
-                <a class="right" href="https://bibi520.github.io/post/linux-ming-ling/">
-                  <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/linux-ming-ling.jpg')">
-                  </div>
-                </a>
-              
-            </article>
-          
-            <article class="post-item">
-              <div class="left">
-                <a href="https://bibi520.github.io/post/certbot-qian-fa-fan-yu-ming-zheng-shu/">
-                  <h2 class="post-title">certbot签发范域名证书</h2>
-                </a>
-                <div class="post-date">
-                  2020-03-10
-                </div>
-                <div class="post-abstract">
-                  
-                </div>
-              </div>
-              
-                <a class="right" href="https://bibi520.github.io/post/certbot-qian-fa-fan-yu-ming-zheng-shu/">
-                  <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/certbot-qian-fa-fan-yu-ming-zheng-shu.jpg')">
-                  </div>
-                </a>
-              
-            </article>
-          
+            
+            <div class="post-content" v-pre>
+              <h3 id="创建一个test只有get权限">创建一个test只有get权限</h3>
+<ol>
+<li>生成用户私钥<br>
+<code>(umask 077; openssl genrsa -out test.key 2048)</code></li>
+<li>生成用户证书<br>
+<code>openssl req -new -key test.key -out test.csr -subj &quot;/CN=test&quot;</code></li>
+<li>签发证书(使用服务端证书去签发)<br>
+<code>openssl x509 -req -in test.csr -CA kube-ca.pem -CAkey kube-ca-key.pem -CAcreateserial -out test.crt -days 365</code></li>
+<li>设置客户端认证<br>
+<code>kubectl config set-credentials test --client-certificate=./test.crt --client-key=./test.key --embed-certs=true</code></li>
+<li>设置上下文<br>
+<code>kubectl config set-context test --cluster=local --user=test</code></li>
+</ol>
 
-          <div class="pagination-container">
-  
-  
-</div>
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://bibi520.github.io/tag/TQq5Wm2hP/" class="tag">
+                    kubernetes
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://bibi520.github.io/post/kubernetes-de-conjob/">
+                  <h3 class="post-title">
+                    kubernetes的job和conjob
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
 
         </div>
       </div>

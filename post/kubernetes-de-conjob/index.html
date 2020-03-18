@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>kubernetes的job和conjob | bibi</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://bibi520.github.io/favicon.ico?v=1584523613442">
+<link rel="stylesheet" href="https://bibi520.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="Job
+
+.spec.template格式同pod
+RestartPolicy仅支持Never和OnFailure
+单个Pod时，默认Pod成功运行后Job即结束
+.spec.completions标志Job结束需要成功运行的Pod个数，默..." />
+    <meta name="keywords" content="kubernetes" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://bibi520.github.io">
+        <img src="https://bibi520.github.io/images/avatar.png?v=1584523613442" class="site-logo">
+        <h1 class="site-title">bibi</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      温故而知新
+    </div>
+    <div class="site-footer">
+      Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a> | <a class="rss" href="https://bibi520.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">kubernetes的job和conjob</h2>
+            <div class="post-date">2020-03-18</div>
+            
+              <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/kubernetes-de-conjob.jpg')">
+              </div>
+            
+            <div class="post-content" v-pre>
+              <h3 id="job">Job</h3>
+<ul>
+<li>.spec.template格式同pod</li>
+<li>RestartPolicy仅支持Never和OnFailure</li>
+<li>单个Pod时，默认Pod成功运行后Job即结束</li>
+<li>.spec.completions标志Job结束需要成功运行的Pod个数，默认为1</li>
+<li>.spec.parallelism标志并行运行的Pod的个数，默认为1</li>
+<li>spec.activeDeadlineSeconds标志失败Pod的重试最大时间，超过这个时间不会继续重试<br>
+例子：</li>
+</ul>
+<pre><code>apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+  template:
+    metadata:
+      name: pi
+    spec:
+      containers:
+      - name: pi
+        image: perl
+        command: [&quot;perl&quot;,  &quot;-Mbignum=bpi&quot;, &quot;-wle&quot;, &quot;print bpi(2000)&quot;]
+      restartPolicy: Never
+</code></pre>
+<h3 id="cronjob-spec">CronJob Spec</h3>
+<p>.spec.schedule: 调度，必须字段，指定任务运行周期<br>
+.spec.jobTemplate: job模板，必须字段，指定需要运行的任务，格式通job<br>
+.spec.startingDeadlineSeconds: 启动job的期限，该字段是可选的。如果因为任何原因错过了被调度的时间，那么错过时间的job将被认定为失败的。如果没指定，则没有期限。<br>
+.spec.concurrencyPolicy: 并发策略，该字段也是可选的。<br>
+* Allow（默认）：允许并行job<br>
+* Forbid：禁止并发运行，如果前一个还没完成，则直接跳过下一个<br>
+* Replace：取消当前正在运行的job，用一个新的来替代<br>
+.spec.suspend: 挂起，该字段也是可选的。如果设置为true，后续所有执行操作都会挂起，他对已经开始的job不起作用。默认值为：false<br>
+.spec.successfulJobsHistoryLimit和.spec.failedJobsHistoryLimit: 历史限制，可选字段。它指定可以保留多少个完成和失败的job。<br>
+例子：</p>
+<pre><code>apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: hello
+spec:
+  schedule: &quot;*/1 * * * *&quot;
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: hello
+            image: busybox
+            args:
+            - /bin/sh
+            - -c
+            - date; echo Hello from the Kubernetes cluster
+          restartPolicy: OnFailure
+</code></pre>
+<h3 id="cron-job的时间表达式">Cron Job的时间表达式</h3>
+<ul>
+<li>Minutes：可出现&quot;,&quot;  &quot;_&quot;  &quot;*&quot;  &quot;/&quot;  这个四个字符串，有效范围为0~59的整数</li>
+<li>Hours：可出现&quot;,&quot;  &quot;_&quot;  &quot;*&quot;  &quot;/&quot;  这个四个字符串，有效范围为0~23的整数</li>
+<li>DayofMonth：可出现&quot;,&quot;  &quot;_&quot;  &quot;*&quot;  &quot;/&quot;  &quot;?&quot;  &quot;L&quot;  &quot;W&quot;  &quot;C&quot;  这8个字符，有效范围为0~31的整数</li>
+<li>Month：可出现&quot;,&quot;  &quot;_&quot;  &quot;*&quot;  &quot;/&quot;  这个四个字符串，有效范围为1~12的整数</li>
+<li>DayofWeek：可出现&quot;,&quot;  &quot;_&quot;  &quot;*&quot;  &quot;/&quot;  &quot;?&quot;  &quot;L&quot;  &quot;C&quot;  &quot;#&quot; 这个8个字符，有效范围为1~7的整数</li>
+</ul>
+
+            </div>
+            
+              <div class="tag-container">
+                
+                  <a href="https://bibi520.github.io/tag/TQq5Wm2hP/" class="tag">
+                    kubernetes
+                  </a>
+                
+              </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://bibi520.github.io/post/tekton-xue-xi/">
+                  <h3 class="post-title">
+                    tekton学习
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

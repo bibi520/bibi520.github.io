@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://bibi520.github.io</id>
     <title>bibi</title>
-    <updated>2020-03-11T07:24:47.481Z</updated>
+    <updated>2020-03-18T09:27:53.051Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://bibi520.github.io"/>
     <link rel="self" href="https://bibi520.github.io/atom.xml"/>
@@ -10,6 +10,408 @@
     <logo>https://bibi520.github.io/images/avatar.png</logo>
     <icon>https://bibi520.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, bibi</rights>
+    <entry>
+        <title type="html"><![CDATA[kubernetes的RBAC]]></title>
+        <id>https://bibi520.github.io/post/kubernetes-de-rbac/</id>
+        <link href="https://bibi520.github.io/post/kubernetes-de-rbac/">
+        </link>
+        <updated>2020-03-18T09:07:26.000Z</updated>
+        <content type="html"><![CDATA[<h3 id="创建一个test只有get权限">创建一个test只有get权限</h3>
+<ol>
+<li>生成用户私钥<br>
+<code>(umask 077; openssl genrsa -out test.key 2048)</code></li>
+<li>生成用户证书<br>
+<code>openssl req -new -key test.key -out test.csr -subj &quot;/CN=test&quot;</code></li>
+<li>签发证书(使用服务端证书去签发)<br>
+<code>openssl x509 -req -in test.csr -CA kube-ca.pem -CAkey kube-ca-key.pem -CAcreateserial -out test.crt -days 365</code></li>
+<li>设置客户端认证<br>
+<code>kubectl config set-credentials test --client-certificate=./test.crt --client-key=./test.key --embed-certs=true</code></li>
+<li>设置上下文<br>
+<code>kubectl config set-context test --cluster=local --user=test</code></li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[kubernetes的job和conjob]]></title>
+        <id>https://bibi520.github.io/post/kubernetes-de-conjob/</id>
+        <link href="https://bibi520.github.io/post/kubernetes-de-conjob/">
+        </link>
+        <updated>2020-03-18T03:20:45.000Z</updated>
+        <content type="html"><![CDATA[<h3 id="job">Job</h3>
+<ul>
+<li>.spec.template格式同pod</li>
+<li>RestartPolicy仅支持Never和OnFailure</li>
+<li>单个Pod时，默认Pod成功运行后Job即结束</li>
+<li>.spec.completions标志Job结束需要成功运行的Pod个数，默认为1</li>
+<li>.spec.parallelism标志并行运行的Pod的个数，默认为1</li>
+<li>spec.activeDeadlineSeconds标志失败Pod的重试最大时间，超过这个时间不会继续重试<br>
+例子：</li>
+</ul>
+<pre><code>apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi
+spec:
+  template:
+    metadata:
+      name: pi
+    spec:
+      containers:
+      - name: pi
+        image: perl
+        command: [&quot;perl&quot;,  &quot;-Mbignum=bpi&quot;, &quot;-wle&quot;, &quot;print bpi(2000)&quot;]
+      restartPolicy: Never
+</code></pre>
+<h3 id="cronjob-spec">CronJob Spec</h3>
+<p>.spec.schedule: 调度，必须字段，指定任务运行周期<br>
+.spec.jobTemplate: job模板，必须字段，指定需要运行的任务，格式通job<br>
+.spec.startingDeadlineSeconds: 启动job的期限，该字段是可选的。如果因为任何原因错过了被调度的时间，那么错过时间的job将被认定为失败的。如果没指定，则没有期限。<br>
+.spec.concurrencyPolicy: 并发策略，该字段也是可选的。<br>
+* Allow（默认）：允许并行job<br>
+* Forbid：禁止并发运行，如果前一个还没完成，则直接跳过下一个<br>
+* Replace：取消当前正在运行的job，用一个新的来替代<br>
+.spec.suspend: 挂起，该字段也是可选的。如果设置为true，后续所有执行操作都会挂起，他对已经开始的job不起作用。默认值为：false<br>
+.spec.successfulJobsHistoryLimit和.spec.failedJobsHistoryLimit: 历史限制，可选字段。它指定可以保留多少个完成和失败的job。<br>
+例子：</p>
+<pre><code>apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: hello
+spec:
+  schedule: &quot;*/1 * * * *&quot;
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: hello
+            image: busybox
+            args:
+            - /bin/sh
+            - -c
+            - date; echo Hello from the Kubernetes cluster
+          restartPolicy: OnFailure
+</code></pre>
+<h3 id="cron-job的时间表达式">Cron Job的时间表达式</h3>
+<ul>
+<li>Minutes：可出现&quot;,&quot;  &quot;_&quot;  &quot;*&quot;  &quot;/&quot;  这个四个字符串，有效范围为0~59的整数</li>
+<li>Hours：可出现&quot;,&quot;  &quot;_&quot;  &quot;*&quot;  &quot;/&quot;  这个四个字符串，有效范围为0~23的整数</li>
+<li>DayofMonth：可出现&quot;,&quot;  &quot;_&quot;  &quot;*&quot;  &quot;/&quot;  &quot;?&quot;  &quot;L&quot;  &quot;W&quot;  &quot;C&quot;  这8个字符，有效范围为0~31的整数</li>
+<li>Month：可出现&quot;,&quot;  &quot;_&quot;  &quot;*&quot;  &quot;/&quot;  这个四个字符串，有效范围为1~12的整数</li>
+<li>DayofWeek：可出现&quot;,&quot;  &quot;_&quot;  &quot;*&quot;  &quot;/&quot;  &quot;?&quot;  &quot;L&quot;  &quot;C&quot;  &quot;#&quot; 这个8个字符，有效范围为1~7的整数</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[tekton学习]]></title>
+        <id>https://bibi520.github.io/post/tekton-xue-xi/</id>
+        <link href="https://bibi520.github.io/post/tekton-xue-xi/">
+        </link>
+        <updated>2020-03-16T08:55:54.000Z</updated>
+        <content type="html"><![CDATA[<h3 id="5种资源">5种资源</h3>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">名称</th>
+<th style="text-align:center">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center"><a href="https://github.com/tektoncd/pipeline/blob/v0.11.0-rc2/docs/tasks.md">task</a></td>
+<td style="text-align:center">定义一系列运行任务</td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="https://github.com/tektoncd/pipeline/blob/v0.11.0-rc2/docs/taskruns.md">TaskRun</a></td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="https://github.com/tektoncd/pipeline/blob/v0.11.0-rc2/docs/pipelines.md">Pipeline</a></td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="https://github.com/tektoncd/pipeline/blob/v0.11.0-rc2/docs/resources.md">PipelineResource	</a></td>
+<td style="text-align:center"></td>
+</tr>
+<tr>
+<td style="text-align:center"><a href="https://github.com/tektoncd/pipeline/blob/v0.11.0-rc2/docs/pipelineruns.md">PipelineRun</a></td>
+<td style="text-align:center"></td>
+</tr>
+</tbody>
+</table>
+<h3 id="实例">实例</h3>
+<pre><code>apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: appweb-develop-task
+spec:
+  inputs:
+    resources:
+    - name: workspace
+      type: git
+  steps:
+  - name: node-install-build
+    image: node:latest
+    workingDir: /workspace/workspace
+    command: ['/bin/bash']
+    args: 
+    - -c
+    - |
+      npm i 
+      npm run build
+    volumeMounts:
+    - name: nms
+      mountPath: /workspace/workspace/node_modules
+    - name: docker-config
+      mountPath: /kaniko/.docker/
+  - name: docker-build
+    image: gcr.io/kaniko-project/executor:v0.17.1  
+    command:
+    - /kaniko/executor
+    args:
+    - --dockerfile=/workspace/workspace/Dockerfile
+    - --context=/workspace/workspace
+    - --destination=registry.us-west-1.aliyuncs.com/chocolate/base
+    - --insecure
+    securityContext:
+      runAsUser: 0
+  volumes:
+  - name: nms
+    hostPath:
+      path: /root/node_modules
+  - name: docker-config
+    configMap:
+      name: docker-config
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: appweb-develop-pipeline
+spec:
+  resources:
+  - name: source-repo
+    type: git
+  tasks:
+  - name: flow
+    taskRef:
+      name: appweb-develop-task
+    resources:
+      inputs:
+      - name: workspace
+        resource: source-repo
+---
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineResource
+metadata:
+  name: appweb-develop-resource
+spec:
+  type: git
+  params:
+  - name: revision
+    value: develop
+  - name: url
+    value: http://203.195.166.252:8080/web/ztime
+---
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[kubernetes亲和性]]></title>
+        <id>https://bibi520.github.io/post/kubernetes-qin-he-xing/</id>
+        <link href="https://bibi520.github.io/post/kubernetes-qin-he-xing/">
+        </link>
+        <updated>2020-03-13T03:00:27.000Z</updated>
+        <content type="html"><![CDATA[<h3 id="nodeaffinitynode亲和性调度">NodeAffinity：node亲和性调度</h3>
+<p>RequiredDuringSchedulingIgnoredDuringExecution：必须满足指定的规则才可以调度pod到node上（相当于硬限制）</p>
+<p>PreferredDuringSchedulingIgnoredDuringExecution：强调优先满足指定规则，调速器尝试调度pod到该node上，但并不强求，相当于软连接。多个优先级规则还可以设置权重（weight）值，以定义执行的先后顺序</p>
+<p>NodeAffinity规则设置注意事项：</p>
+<ol>
+<li>如果同时定义了nodeselector和Nodeaffinity，那么必须两个条件都得到满足，pod才能调度该node上去</li>
+<li>如果nodeaffinity指定了多个nodeselectorTerms，满足其中一个即可</li>
+<li>如果在nodeselectorTerms中有多个matchExpressions，则一个节点必须满足所有matchExpressions才能运行pod</li>
+</ol>
+<h3 id="podaffinitypod亲和性与互斥策略">PodAffinity：Pod亲和性与互斥策略</h3>
+<p>和节点的亲和性相同，pod亲和性与互斥的条件设置也是RequiredDuringSchedulingIgnoredDuringExecution和PreferredDuringSchedulingIgnoredDuringExecution</p>
+<p>PodAffinity规则注意事项：</p>
+<ol>
+<li>除了设置Label selector 和topologyKey，用户还可以指定namespace列表来进行限制，同样，使用Label selector 对namespace进行选择。namespace的定义和Label selector 及topology同级。省略Namespace的设置，表示使用定义了affinity和anti-affinity的pod所在的namespace。如何namespace被设置为控制(&quot;&quot;),则表示所有的namespace。</li>
+<li>在所有关联RequiredDuringSchedulingIgnoredDuringExecution的matchExpression全都满足之后，系统才能将pod调度都某个节点上。</li>
+</ol>
+<h3 id="下面是在这个节点上-只能存在一个标签为app-值等于efficientnet_watch_recognize的pod">下面是在这个节点上  只能存在一个标签为app 值等于efficientnet_watch_recognize的pod</h3>
+<pre><code>apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: efficientnet_watch_recognize
+  labels:
+    app: efficientnet_watch_recognize
+    version: master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: efficientnet_watch_recognize
+      version: master
+  template:
+    metadata:
+      labels:
+        app: efficientnet_watch_recognize
+        version: master
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                - 10.0.1.5
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - efficientnet_watch_recognize
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - name: efficientnet_watch_recognize
+        image: nginx
+        # ports:
+        # - containerPort: 8080
+        volumeMounts:
+        - mountPath: /persistentvolumes/logs
+          name: nfs_logs
+         - mountPath: /persistentvolumes/images
+          name: nfs_images
+#      nodeSelector:
+#        GPU: &quot;true&quot;
+      tolerations:
+      - key: &quot;GPU&quot;
+        operator: &quot;Equal&quot;
+        value: &quot;true&quot;
+        effect: &quot;NoSchedule&quot;
+      volumes:
+      - name: nfs_logs
+        nfs:
+          path: /logs
+          server: 10.0.1.31
+      - name: nfs_images
+        nfs:
+          path: /images
+          server: 10.0.1.31
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[python爬取实例1]]></title>
+        <id>https://bibi520.github.io/post/python-pa-qu-tu-pian/</id>
+        <link href="https://bibi520.github.io/post/python-pa-qu-tu-pian/">
+        </link>
+        <updated>2020-03-12T08:57:46.000Z</updated>
+        <content type="html"><![CDATA[<h4 id="仅供学习参考">仅供学习参考</h4>
+<pre><code>import  requests,time,threading,os,random
+from lxml import etree
+from queue import Queue
+os.chdir('picture')
+headers = {
+    'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE'
+}
+# 创建一个先进先出队列
+detail_url_queue = Queue()
+
+#  抓取图片地址并下载
+def get_picture(queue):
+    while not detail_url_queue.empty():
+        url = queue.get()
+        print(url)
+        html = requests.get(url,headers=headers)
+        html.encoding = 'gbk'
+        selector = etree.HTML(html.text)
+        pic = selector.xpath('//ul[@class=&quot;clearfix&quot;]//li//img//@src')
+        for i in pic:
+            href = &quot;http://pic.netbian.com&quot;+ i
+            content = requests.get(href,headers=headers).content
+            with open('{}.jpg'.format(random.random()),'wb') as p:
+                p.write(content)
+# 获取图片列表页
+def get_url(queue):
+    for i in range(1,5000):
+        queue.put(&quot;http://pic.netbian.com/4kdongman/index_{}.html&quot;.format(i))
+
+if __name__ == &quot;__main__&quot;:
+    start_time = time.time()
+    t = threading.Thread(target=get_url(detail_url_queue)) #开启一个线程去抓取图片列表页
+    t2 = threading.Thread(target=get_picture(detail_url_queue)) #开启一个线程去抓取图片
+
+    t.start()
+    t2.start()
+
+    t.join()
+    t2.join()
+    print(&quot;last time: {} s&quot;.format(time.time()-start_time))
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[linux命令]]></title>
+        <id>https://bibi520.github.io/post/linux-ming-ling/</id>
+        <link href="https://bibi520.github.io/post/linux-ming-ling/">
+        </link>
+        <updated>2020-03-12T03:29:05.000Z</updated>
+        <content type="html"><![CDATA[<h4 id="auditctl用于配置与审计相关的内核选项">auditctl用于配置与审计相关的内核选项</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">参数</th>
+<th style="text-align:center">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">-w</td>
+<td style="text-align:center">需要监控的文件或是命令</td>
+</tr>
+<tr>
+<td style="text-align:center">-p</td>
+<td style="text-align:center">指定监控属性</td>
+</tr>
+<tr>
+<td style="text-align:center">-k</td>
+<td style="text-align:center">设置一个关键字用于查询</td>
+</tr>
+</tbody>
+</table>
+<h4 id="ausearch查看审计日志">ausearch查看审计日志</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">参数</th>
+<th style="text-align:center">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">-a</td>
+<td style="text-align:center">只显示id为指定数字的日志信息</td>
+</tr>
+<tr>
+<td style="text-align:center">-c</td>
+<td style="text-align:center">只显示和命令相关的信息</td>
+</tr>
+<tr>
+<td style="text-align:center">-i</td>
+<td style="text-align:center">显示详细信息</td>
+</tr>
+<tr>
+<td style="text-align:center">-k</td>
+<td style="text-align:center">查看带有关键字的信息</td>
+</tr>
+</tbody>
+</table>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[helm搭建istio1.5]]></title>
         <id>https://bibi520.github.io/post/helm-da-jian-istio15/</id>
