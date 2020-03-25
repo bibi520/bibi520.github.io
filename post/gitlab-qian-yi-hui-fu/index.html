@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" >
 
-<title>kubernetes的RBAC | bibi</title>
+<title>gitlab迁移恢复 | bibi</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
@@ -18,13 +18,10 @@
 
 
 
-    <meta name="description" content="创建一个test只有get权限
-
-生成用户私钥
-(umask 077; openssl genrsa -out test.key 2048)
-生成用户证书
-openssl req -new -key test.key -out test.c..." />
-    <meta name="keywords" content="kubernetes" />
+    <meta name="description" content="1.设置gitlab备份的目录，权限，有效日期
+[root@localhost /]# cat /etc/gitlab/gitlab.rb | grep -v &quot;#&quot;
+external_url 'http://192.1..." />
+    <meta name="keywords" content="gitlab" />
   </head>
   <body>
     <div id="app" class="main">
@@ -95,33 +92,54 @@ openssl req -new -key test.key -out test.c..." />
       <div class="main-container">
         <div class="content-container" data-aos="fade-up">
           <div class="post-detail">
-            <h2 class="post-title">kubernetes的RBAC</h2>
-            <div class="post-date">2020-03-18</div>
+            <h2 class="post-title">gitlab迁移恢复</h2>
+            <div class="post-date">2020-03-24</div>
             
-              <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/kubernetes-de-rbac.jpg')">
+              <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/gitlab-qian-yi-hui-fu.jpg')">
               </div>
             
             <div class="post-content" v-pre>
-              <h3 id="创建一个test只有get权限">创建一个test只有get权限</h3>
+              <h3 id="1设置gitlab备份的目录权限有效日期">1.设置gitlab备份的目录，权限，有效日期</h3>
+<pre><code>[root@localhost /]# cat /etc/gitlab/gitlab.rb | grep -v &quot;#&quot;
+external_url 'http://192.168.8.127'   //安装设定的访问域名
+gitlab_rails['manage_backup_path'] = true
+gitlab_rails['backup_path'] = &quot;/data/gitlab/backups&quot;    //备份路径
+gitlab_rails['backup_archive_permissions'] = 0644     //备份文件权限
+gitlab_rails['backup_keep_time'] = 7776000    //备份文件有效期 30天 
+</code></pre>
+<h3 id="2创建备份路径">2.创建备份路径</h3>
+<pre><code>[root@localhost /]# mkdir -vp /data/gitlab/backups
+mkdir: 已创建目录 &quot;/data&quot;
+mkdir: 已创建目录 &quot;/data/gitlab&quot;
+mkdir: 已创建目录 &quot;/data/gitlab/backups&quot;
+</code></pre>
+<h3 id="3-重新加载配置">3. 重新加载配置</h3>
+<p><code>gitlab-ctl reconfigure</code></p>
+<h3 id="4开始备份如果用的是默认备份前三步就不用做了直接这步开始版本不能相差太大不然会报错">4.开始备份（如果用的是默认备份，前三步就不用做了，直接这步开始）版本不能相差太大，不然会报错</h3>
+<pre><code>默认备份存放的路径：/var/opt/gitlab/backups
+gitlab-rake gitlab:backup:create
+拷贝旧服务器上的gitlab.rb和gitlab-secrets.json替换掉新服务器的
+gitlab.rb路径：/etc/gitlab/gitlab.rb
+gitlab-secrets.json路径：/etc/gitlab/gitlab-secrets.json
+</code></pre>
+<h3 id="4-开始恢复文件">4. 开始恢复文件</h3>
 <ol>
-<li>生成用户私钥<br>
-<code>(umask 077; openssl genrsa -out test.key 2048)</code></li>
-<li>生成用户证书<br>
-<code>openssl req -new -key test.key -out test.csr -subj &quot;/CN=test&quot;</code></li>
-<li>签发证书(使用服务端证书去签发)<br>
-<code>openssl x509 -req -in test.csr -CA kube-ca.pem -CAkey kube-ca-key.pem -CAcreateserial -out test.crt -days 365</code></li>
-<li>设置客户端认证<br>
-<code>kubectl config set-credentials test --client-certificate=./test.crt --client-key=./test.key --embed-certs=true</code></li>
-<li>设置上下文<br>
-<code>kubectl config set-context test --cluster=local --user=test</code></li>
+<li>关闭gitlab数据连接的某些服务<pre><code>gitlab-ctl stop unicorn
+gitlab-ctl stop sidekiq
+gitlab-ctl stop ngin
+</code></pre>
+</li>
+<li>对备份文件进行赋权并并恢复，一定要在备份路径下执行恢复命令，不要带后面的英文字母，不然会报文件不存在<br>
+chmod 777 1585017266_2020_03_24_12.0.3_gitlab_backup.tar<br>
+gitlab-rake gitlab:backup:restore BACKUP=./1585017266_2020_03_24_12.0.3</li>
 </ol>
 
             </div>
             
               <div class="tag-container">
                 
-                  <a href="https://bibi520.github.io/tag/TQq5Wm2hP/" class="tag">
-                    kubernetes
+                  <a href="https://bibi520.github.io/tag/PnvLLLtCJ/" class="tag">
+                    gitlab
                   </a>
                 
               </div>
@@ -129,9 +147,9 @@ openssl req -new -key test.key -out test.c..." />
             
               <div class="next-post">
                 <div class="next">下一篇</div>
-                <a href="https://bibi520.github.io/post/kubernetes-de-conjob/">
+                <a href="https://bibi520.github.io/post/kubernetes-de-rbac/">
                   <h3 class="post-title">
-                    kubernetes的job和conjob
+                    kubernetes的RBAC
                   </h3>
                 </a>
               </div>

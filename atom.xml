@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://bibi520.github.io</id>
     <title>bibi</title>
-    <updated>2020-03-23T08:17:13.856Z</updated>
+    <updated>2020-03-25T02:36:06.327Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://bibi520.github.io"/>
     <link rel="self" href="https://bibi520.github.io/atom.xml"/>
@@ -10,6 +10,48 @@
     <logo>https://bibi520.github.io/images/avatar.png</logo>
     <icon>https://bibi520.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, bibi</rights>
+    <entry>
+        <title type="html"><![CDATA[gitlab迁移恢复]]></title>
+        <id>https://bibi520.github.io/post/gitlab-qian-yi-hui-fu/</id>
+        <link href="https://bibi520.github.io/post/gitlab-qian-yi-hui-fu/">
+        </link>
+        <updated>2020-03-24T07:09:38.000Z</updated>
+        <content type="html"><![CDATA[<h3 id="1设置gitlab备份的目录权限有效日期">1.设置gitlab备份的目录，权限，有效日期</h3>
+<pre><code>[root@localhost /]# cat /etc/gitlab/gitlab.rb | grep -v &quot;#&quot;
+external_url 'http://192.168.8.127'   //安装设定的访问域名
+gitlab_rails['manage_backup_path'] = true
+gitlab_rails['backup_path'] = &quot;/data/gitlab/backups&quot;    //备份路径
+gitlab_rails['backup_archive_permissions'] = 0644     //备份文件权限
+gitlab_rails['backup_keep_time'] = 7776000    //备份文件有效期 30天 
+</code></pre>
+<h3 id="2创建备份路径">2.创建备份路径</h3>
+<pre><code>[root@localhost /]# mkdir -vp /data/gitlab/backups
+mkdir: 已创建目录 &quot;/data&quot;
+mkdir: 已创建目录 &quot;/data/gitlab&quot;
+mkdir: 已创建目录 &quot;/data/gitlab/backups&quot;
+</code></pre>
+<h3 id="3-重新加载配置">3. 重新加载配置</h3>
+<p><code>gitlab-ctl reconfigure</code></p>
+<h3 id="4开始备份如果用的是默认备份前三步就不用做了直接这步开始版本不能相差太大不然会报错">4.开始备份（如果用的是默认备份，前三步就不用做了，直接这步开始）版本不能相差太大，不然会报错</h3>
+<pre><code>默认备份存放的路径：/var/opt/gitlab/backups
+gitlab-rake gitlab:backup:create
+拷贝旧服务器上的gitlab.rb和gitlab-secrets.json替换掉新服务器的
+gitlab.rb路径：/etc/gitlab/gitlab.rb
+gitlab-secrets.json路径：/etc/gitlab/gitlab-secrets.json
+</code></pre>
+<h3 id="4-开始恢复文件">4. 开始恢复文件</h3>
+<ol>
+<li>关闭gitlab数据连接的某些服务<pre><code>gitlab-ctl stop unicorn
+gitlab-ctl stop sidekiq
+gitlab-ctl stop ngin
+</code></pre>
+</li>
+<li>对备份文件进行赋权并并恢复，一定要在备份路径下执行恢复命令，不要带后面的英文字母，不然会报文件不存在<br>
+chmod 777 1585017266_2020_03_24_12.0.3_gitlab_backup.tar<br>
+gitlab-rake gitlab:backup:restore BACKUP=./1585017266_2020_03_24_12.0.3</li>
+</ol>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[kubernetes的RBAC]]></title>
         <id>https://bibi520.github.io/post/kubernetes-de-rbac/</id>
@@ -736,127 +778,6 @@ spec:
 PluginError('An authentication script must be provided with --manual-auth-hook when using the manual plugin non-interactively.'</p>
 <h4 id="解决方式说白了就是重新申请">解决方式（说白了就是重新申请）</h4>
 <p><code>certbot certonly -d *.xxx.com --manual --preferred-challenges dns --server https://acme-v02.api.letsencrypt.org/directory</code></p>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[xpath基础语法]]></title>
-        <id>https://bibi520.github.io/post/xpath-ji-chu-yu-fa/</id>
-        <link href="https://bibi520.github.io/post/xpath-ji-chu-yu-fa/">
-        </link>
-        <updated>2020-03-10T03:14:21.000Z</updated>
-        <content type="html"><![CDATA[<h4 id="选取节点">选取节点</h4>
-<table>
-<thead>
-<tr>
-<th style="text-align:left">表达式</th>
-<th style="text-align:center">描述</th>
-<th style="text-align:center">实例</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left">nodename</td>
-<td style="text-align:center">选取所有的nodename节点</td>
-<td style="text-align:center">xpath('//div')</td>
-</tr>
-<tr>
-<td style="text-align:left">/</td>
-<td style="text-align:center">选取属于根节点的子节点</td>
-<td style="text-align:center">xpath('/div')</td>
-</tr>
-<tr>
-<td style="text-align:left">//</td>
-<td style="text-align:center">选取当前的所有节点，不考虑位置</td>
-<td style="text-align:center">xpath('//div')</td>
-</tr>
-<tr>
-<td style="text-align:left">.</td>
-<td style="text-align:center">选取当前节点</td>
-<td style="text-align:center">xpath('./div')</td>
-</tr>
-<tr>
-<td style="text-align:left">@</td>
-<td style="text-align:center">选取符合属性的节点</td>
-<td style="text-align:center">xpath('//@src')</td>
-</tr>
-<tr>
-<td style="text-align:left">*</td>
-<td style="text-align:center">选取nodename所有节点</td>
-<td style="text-align:center">xpath('/div/*')</td>
-</tr>
-</tbody>
-</table>
-<h4 id="选取位置节点">选取位置节点</h4>
-<table>
-<thead>
-<tr>
-<th style="text-align:left">实例</th>
-<th style="text-align:center">结果</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left">xpath('/div/img[1]')</td>
-<td style="text-align:center">选取div节点下的第一个img节点</td>
-</tr>
-<tr>
-<td style="text-align:left">xpath('/div/img[last()]')</td>
-<td style="text-align:center">选取div节点下最后一个img节点</td>
-</tr>
-<tr>
-<td style="text-align:left">xpath('/div/img[last()-1]')</td>
-<td style="text-align:center">选取div节点下的倒数第二个img节点</td>
-</tr>
-<tr>
-<td style="text-align:left">xpath('/div/img[positon() &lt; 3]')</td>
-<td style="text-align:center">选取div节点下前两个img节点</td>
-</tr>
-<tr>
-<td style="text-align:left">xpath('/div/img[@class]')</td>
-<td style="text-align:center">选取div节点下带有class属性的img节点</td>
-</tr>
-<tr>
-<td style="text-align:left">xpath('/div/img[@class=&quot;txt&quot;]')</td>
-<td style="text-align:center">选取div节点下class属性为txt的img节点</td>
-</tr>
-<tr>
-<td style="text-align:left">xpath('//div | //table')</td>
-<td style="text-align:center">选取所有的div和table节点</td>
-</tr>
-</tbody>
-</table>
-<h4 id="函数功能">函数功能</h4>
-<table>
-<thead>
-<tr>
-<th style="text-align:left">函数</th>
-<th style="text-align:center">实例</th>
-<th style="text-align:center">解释</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left">starts-with</td>
-<td style="text-align:center">xpath('//div/[starts-with(@id,&quot;img&quot;)]')</td>
-<td style="text-align:center">选取id的值以img开头的所有div节点</td>
-</tr>
-<tr>
-<td style="text-align:left">contains</td>
-<td style="text-align:center">xpath('//div/[contains(@id,&quot;img&quot;)]')</td>
-<td style="text-align:center">选取id的值包含img的所有div节点</td>
-</tr>
-<tr>
-<td style="text-align:left">and</td>
-<td style="text-align:center">xpath('//div[contains(@id,&quot;img&quot;) and contains(@id,&quot;src&quot;)]')</td>
-<td style="text-align:center">选取id的值包含img和src所有div节点</td>
-</tr>
-<tr>
-<td style="text-align:left">text()</td>
-<td style="text-align:center">xpath('//div/[contains(text(),&quot;img&quot;)]')</td>
-<td style="text-align:center">选取节点文本包含img的所有div节点</td>
-</tr>
-</tbody>
-</table>
 ]]></content>
     </entry>
 </feed>
