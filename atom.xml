@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://bibi520.github.io</id>
     <title>bibi</title>
-    <updated>2020-03-25T02:36:06.327Z</updated>
+    <updated>2020-04-08T09:26:30.524Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://bibi520.github.io"/>
     <link rel="self" href="https://bibi520.github.io/atom.xml"/>
@@ -589,6 +589,65 @@ if __name__ == &quot;__main__&quot;:
 <tr>
 <td style="text-align:center">-k</td>
 <td style="text-align:center">查看带有关键字的信息</td>
+</tr>
+</tbody>
+</table>
+<h4 id="nmap扫描端口">nmap扫描端口</h4>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">参数</th>
+<th style="text-align:center">作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">-sT</td>
+<td style="text-align:center">TCP connect()扫描，这种方式会在目标主机的日志中记录大批连接请求和错误信息</td>
+</tr>
+<tr>
+<td style="text-align:center">-sS</td>
+<td style="text-align:center">半开扫描，很少有系统能把它记入系统日志。不过，需要Root权限</td>
+</tr>
+<tr>
+<td style="text-align:center">-sF -sN</td>
+<td style="text-align:center">秘密FIN数据包扫描、Xmas Tree、Nll描模式</td>
+</tr>
+<tr>
+<td style="text-align:center">-sP</td>
+<td style="text-align:center">ping扫描，Nmap在扫描端口时，默认都会使用ping扫描，只有主机存活，Nmap才会继续扫描</td>
+</tr>
+<tr>
+<td style="text-align:center">-sU</td>
+<td style="text-align:center">UDP扫描，但UDP扫描是不可靠的</td>
+</tr>
+<tr>
+<td style="text-align:center">-sA</td>
+<td style="text-align:center">这项高级的扫描方法通常用来穿过防火墙的规则集</td>
+</tr>
+<tr>
+<td style="text-align:center">-sV</td>
+<td style="text-align:center">探测端口服务版本</td>
+</tr>
+<tr>
+<td style="text-align:center">-Pn</td>
+<td style="text-align:center">扫描之前不需要用ping命令，有些防火墙禁止ping命令。可以使用此选项进行扫描</td>
+</tr>
+<tr>
+<td style="text-align:center">-p</td>
+<td style="text-align:center">指定端口如&quot;1-65535、 1433、135、 22、80等</td>
+</tr>
+<tr>
+<td style="text-align:center">-r</td>
+<td style="text-align:center">使用“-r”选项表示不会随机的选择端口扫描</td>
+</tr>
+<tr>
+<td style="text-align:center">--iflist</td>
+<td style="text-align:center">检测主机接口和路由信息</td>
+</tr>
+<tr>
+<td style="text-align:center">-PA ,-PS</td>
+<td style="text-align:center">使用TCP ACK和TCP Syn方法来扫描远程主机</td>
 </tr>
 </tbody>
 </table>
