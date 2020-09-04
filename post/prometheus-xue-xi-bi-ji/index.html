@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" >
 
-<title>kubernetes的RBAC | bibi</title>
+<title>Prometheus学习笔记 | bibi</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
@@ -18,13 +18,19 @@
 
 
 
-    <meta name="description" content="创建一个test只有get权限
+    <meta name="description" content="Prometheus数据类型
 
-生成用户私钥
-(umask 077; openssl genrsa -out test.key 2048)
-生成用户证书
-openssl req -new -key test.key -out test.c..." />
-    <meta name="keywords" content="kubernetes" />
+Counter（计数器类型）
+Guage（仪表盘类型）
+Histogram（直方图类型）
+Summary（摘要类型）
+
+时间序列过滤器
+
+瞬时向量过滤器
+=      : 选择与提供的字符串完全相同的标签。
+..." />
+    <meta name="keywords" content="" />
   </head>
   <body>
     <div id="app" class="main">
@@ -95,43 +101,58 @@ openssl req -new -key test.key -out test.c..." />
       <div class="main-container">
         <div class="content-container" data-aos="fade-up">
           <div class="post-detail">
-            <h2 class="post-title">kubernetes的RBAC</h2>
-            <div class="post-date">2020-03-18</div>
-            
-              <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/kubernetes-de-rbac.jpg')">
-              </div>
+            <h2 class="post-title">Prometheus学习笔记</h2>
+            <div class="post-date">2020-07-13</div>
             
             <div class="post-content" v-pre>
-              <h3 id="创建一个test只有get权限">创建一个test只有get权限</h3>
+              <h3 id="prometheus数据类型">Prometheus数据类型</h3>
 <ol>
-<li>生成用户私钥<br>
-<code>(umask 077; openssl genrsa -out test.key 2048)</code></li>
-<li>生成用户证书<br>
-<code>openssl req -new -key test.key -out test.csr -subj &quot;/CN=test&quot;</code></li>
-<li>签发证书(使用服务端证书去签发)<br>
-<code>openssl x509 -req -in test.csr -CA kube-ca.pem -CAkey kube-ca-key.pem -CAcreateserial -out test.crt -days 365</code></li>
-<li>设置客户端认证<br>
-<code>kubectl config set-credentials test --client-certificate=./test.crt --client-key=./test.key --embed-certs=true</code></li>
-<li>设置上下文<br>
-<code>kubectl config set-context test --cluster=local --user=test</code></li>
+<li>Counter（计数器类型）</li>
+<li>Guage（仪表盘类型）</li>
+<li>Histogram（直方图类型）</li>
+<li>Summary（摘要类型）</li>
 </ol>
+<h3 id="时间序列过滤器">时间序列过滤器</h3>
+<ol>
+<li>瞬时向量过滤器<br>
+=      : 选择与提供的字符串完全相同的标签。<br>
+!=     : 选择与提供的字符串不相同的标签。<br>
+=~    : 选择正则表达式与提供的字符串（或子字符串）相匹配的标签。<br>
+!~      : 选择正则表达式与提供的字符串（或子字符串）不匹配的标签。<br>
+http_requests_total{environment=~&quot;staging|testing|development&quot;,method!=&quot;GET&quot;}</li>
+<li>区间向量过滤器<br>
+http_requests_total{job=&quot;prometheus&quot;}[5m]</li>
+<li>时间位移操作<br>
+http_request_total{} # 瞬时向量表达式，选择当前最新的数据<br>
+http_request_total{}[5m] # 区间向量表达式，选择以当前时间为基准，5分钟内的数据</li>
+</ol>
+<h3 id="offset-查询之前的数据">offset： 查询之前的数据</h3>
+<p>注意：offset 关键字需要紧跟在选择器（{}）后面。以下表达式是正确的：<br>
+<code>sum(http_requests_total{method=&quot;GET&quot;} offset 5m) // GOOD.</code><br>
+该操作同样适用于区间向量。以下表达式返回指标 http_requests_total 一周前的 5 分钟之内的 HTTP 请求量的增长率：<br>
+<code>rate(http_requests_total[5m] offset 1w)</code></p>
+<h3 id="内置的聚合操作">内置的聚合操作</h3>
+<pre><code>sum (求和)
+min (最小值)
+max (最大值)
+avg (平均值)
+stddev (标准差)
+stdvar (标准差异)
+count (计数)
+count_values (对 value 进行计数)
+bottomk (样本值最小的 k 个元素)
+topk (样本值最大的k个元素)
+quantile (分布统计)
+</code></pre>
 
             </div>
-            
-              <div class="tag-container">
-                
-                  <a href="https://bibi520.github.io/tag/TQq5Wm2hP/" class="tag">
-                    kubernetes
-                  </a>
-                
-              </div>
             
             
               <div class="next-post">
                 <div class="next">下一篇</div>
-                <a href="https://bibi520.github.io/post/kubernetes-de-conjob/">
+                <a href="https://bibi520.github.io/post/go-yu-yan-strings-he-strconv-bao/">
                   <h3 class="post-title">
-                    kubernetes的job和conjob
+                    go语言strings和 strconv包
                   </h3>
                 </a>
               </div>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>filebeat+logstash+es+kibana收集ingress日志 | bibi</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://bibi520.github.io/favicon.ico?v=1599211274197">
+<link rel="stylesheet" href="https://bibi520.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="####1.需要修改nginx-ingress日志格式为json格式
+{&quot;time&quot;: &quot;$time_iso8601&quot;, &quot;remote_addr&quot;: &quot;$proxy_p..." />
+    <meta name="keywords" content="" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://bibi520.github.io">
+        <img src="https://bibi520.github.io/images/avatar.png?v=1599211274197" class="site-logo">
+        <h1 class="site-title">bibi</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      温故而知新
+    </div>
+    <div class="site-footer">
+      <a href="http://beian.miit.gov.cn/" target="_blank">粤ICP备20013770号-1</a> | <a class="rss" href="https://bibi520.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">filebeat+logstash+es+kibana收集ingress日志</h2>
+            <div class="post-date">2020-09-04</div>
+            
+            <div class="post-content" v-pre>
+              <p>####1.需要修改nginx-ingress日志格式为json格式</p>
+<pre><code>{&quot;time&quot;: &quot;$time_iso8601&quot;, &quot;remote_addr&quot;: &quot;$proxy_protocol_addr&quot;, &quot;x-forward-for&quot;: &quot;$proxy_add_x_forwarded_for&quot;, &quot;request_id&quot;: &quot;$req_id&quot;, &quot;remote_user&quot;: &quot;$remote_user&quot;, &quot;bytes_sent&quot;: $bytes_sent, &quot;request_time&quot;: $request_time, &quot;status&quot;:$status, &quot;vhost&quot;: &quot;$host&quot;, &quot;request_proto&quot;: &quot;$server_protocol&quot;, &quot;path&quot;: &quot;$uri&quot;, &quot;request_query&quot;: &quot;$args&quot;, &quot;request_length&quot;: $request_length, &quot;duration&quot;: $request_time,&quot;method&quot;: &quot;$request_method&quot;, &quot;http_referrer&quot;: &quot;$http_referer&quot;, &quot;proxy_upstream_name&quot;: &quot;$proxy_upstream_name&quot;,&quot;upstream_addr&quot;: &quot;$upstream_addr&quot;,&quot;upstream_status&quot;: &quot;$upstream_status&quot;,&quot;http_user_agent&quot;: &quot;$http_user_agent&quot;}
+</code></pre>
+<h3 id="2配置filebeat">2.配置filebeat</h3>
+<pre><code>    filebeat.config:
+      modules:
+        path: ${path.config}/modules.d/*.yml
+        reload.enabled: true
+        reload.period: 10s
+    filebeat.inputs:
+    - containers.ids:
+      - '*'
+      json.keys_under_root: true
+      json.ignore_decoding_error: true
+      processors:
+      - add_tags:
+          tags: [&quot;nginx-log&quot;]
+      - add_kubernetes_metadata:
+          in_cluster: true
+      - drop_event:
+          when:
+            not:
+              equals:
+                kubernetes.container.name: ack-ingress-nginx-controller
+      type: docker
+
+          http.enabled: true
+    http.port: 5066
+#    output.file:
+#      filename: filebeat
+#      number_of_files: 5
+#      path: /usr/share/filebeat/data
+#      rotate_every_kb: 10000
+    output.logstash:
+       hosts: [&quot;logstash:5044&quot;]
+    processors:
+    - add_cloud_metadata: null
+</code></pre>
+<p>###3.logstash配置文件</p>
+<pre><code>output {
+ stdout { codec =&gt; rubydebug }
+   elasticsearch {
+    hosts =&gt; [&quot;${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}&quot;]
+    user =&gt; &quot;elastic-internal&quot;
+    password =&gt; &quot;Rk2x7s5Y4Y9y9O91YgrUPs49&quot;
+    manage_template =&gt; false
+    index =&gt; &quot;logstash-nginx-%{+YYYY.MM.dd}&quot;
+  }
+}
+
+input {
+  beats {
+    port =&gt; 5044
+  }
+}
+
+#剔除一些不必要的字段
+filter{
+    mutate{
+        remove_field =&gt; [&quot;host&quot;]
+        remove_field =&gt; [&quot;agent&quot;]
+        remove_field =&gt; [&quot;ecs&quot;]
+        remove_field =&gt; [&quot;tags&quot;]
+        remove_field =&gt; [&quot;fields&quot;]
+        remove_field =&gt; [&quot;@version&quot;]
+#        remove_field =&gt; [&quot;@timestamp&quot;]
+        remove_field =&gt; [&quot;input&quot;]
+        remove_field =&gt; [&quot;log&quot;]
+        remove_field =&gt; [&quot;kubernetes&quot;]
+    }
+    geoip{
+       source =&gt; &quot;x-forward-for&quot;
+       target =&gt; &quot;geoip&quot;
+       database =&gt; &quot;/usr/share/logstash/data/geoip/GeoLite2-City.mmdb&quot;
+    } 
+}
+</code></pre>
+<p>4.结果<br>
+<img src="https://bibi520.github.io/post-images/1599211263143.png" alt="" loading="lazy"></p>
+
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://bibi520.github.io/post/logstash-xue-xi/">
+                  <h3 class="post-title">
+                    logstash学习
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

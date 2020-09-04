@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" >
 
-<title>docker | bibi</title>
+<title>istio+flagger金丝雀发布 | bibi</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
@@ -18,7 +18,12 @@
 
 
 
-    <meta name="description" content="温故而知新">
+    <meta name="description" content="1.安装flagger
+slack申请地址
+helm repo add flagger https://flagger.app
+
+kubectl apply -f https://raw.githubusercontent.com/weav..." />
+    <meta name="keywords" content="" />
   </head>
   <body>
     <div id="app" class="main">
@@ -88,33 +93,83 @@
 
       <div class="main-container">
         <div class="content-container" data-aos="fade-up">
-          <h2 class="current-tag">标签: docker</h2>
-          
-            <article class="post-item">
-              <div class="left">
-                <a href="https://bibi520.github.io/post/docker-compose-ji-chu-yu-fa/">
-                  <h2 class="post-title">docker-compose基础语法</h2>
-                </a>
-                <div class="post-date">
-                  2020-03-10
-                </div>
-                <div class="post-abstract">
-                  
-                </div>
-              </div>
-              
-                <a class="right" href="https://bibi520.github.io/post/docker-compose-ji-chu-yu-fa/">
-                  <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/docker-compose-ji-chu-yu-fa.jpg')">
-                  </div>
-                </a>
-              
-            </article>
-          
+          <div class="post-detail">
+            <h2 class="post-title">istio+flagger金丝雀发布</h2>
+            <div class="post-date">2020-07-27</div>
+            
+            <div class="post-content" v-pre>
+              <h4 id="1安装flagger">1.安装flagger</h4>
+<p>slack申请<a href="https://app.slack.com/">地址</a></p>
+<pre><code>helm repo add flagger https://flagger.app
 
-          <div class="pagination-container">
-  
-  
-</div>
+kubectl apply -f https://raw.githubusercontent.com/weaveworks/flagger/master/artifacts/flagger/crd.yaml
+
+helm upgrade -i flagger flagger/flagger \
+--namespace=istio-system \
+--set crd.create=false \
+--set metricsServer=http://prometheus.istio-system:9090 \
+--set slack.url=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK \
+--set slack.channel=general \
+--set slack.user=flagger
+</code></pre>
+<h4 id="2添加一个需要金丝雀发布的deployment">2.添加一个需要金丝雀发布的deployment</h4>
+<pre><code>apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: nginx
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nginx
+  service:
+    port: 80
+    gateways:
+    - mesh
+    hosts:
+    - nginx
+  analysis:
+    interval: 10s
+    threshold: 10
+    maxWeight: 50
+    stepWeight: 5
+    metrics:
+      - name: istio_requests_total
+        thresholdRange:
+          min: 99
+        interval: 30s
+      - name: istio_request_duration_seconds_bucket
+        thresholdRange:
+          max: 500
+        interval: 30s
+    webhooks:
+      - name: load-test
+        url: http://flagger-loadtester.argo/
+        metadata:
+          cmd: &quot;hey -z 1m -q 10 -c 2 http://nginx/&quot;
+</code></pre>
+<p>需要注意：</p>
+<ol>
+<li>metrics必须是prometheus的监控指标</li>
+<li>flagger-loadtester需要<a href="https://docs.flagger.app/usage/webhooks">安装</a></li>
+</ol>
+
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://bibi520.github.io/post/ingress-nginx-jia-cdn-zhi-hou-huo-qu-ke-hu-zhen-shi-ip/">
+                  <h3 class="post-title">
+                    ingress-nginx加cdn之后获取客户真实ip 限流
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
 
         </div>
       </div>

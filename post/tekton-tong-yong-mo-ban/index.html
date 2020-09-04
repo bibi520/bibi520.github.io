@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>tekton通用模板 | bibi</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://bibi520.github.io/favicon.ico?v=1599211274197">
+<link rel="stylesheet" href="https://bibi520.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="1.创建两个task，因为我的生产不需要自动化发布  所以新建两个task
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: build-image
+spec:
+  i..." />
+    <meta name="keywords" content="" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://bibi520.github.io">
+        <img src="https://bibi520.github.io/images/avatar.png?v=1599211274197" class="site-logo">
+        <h1 class="site-title">bibi</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      温故而知新
+    </div>
+    <div class="site-footer">
+      <a href="http://beian.miit.gov.cn/" target="_blank">粤ICP备20013770号-1</a> | <a class="rss" href="https://bibi520.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">tekton通用模板</h2>
+            <div class="post-date">2020-08-17</div>
+            
+            <div class="post-content" v-pre>
+              <h4 id="1创建两个task因为我的生产不需要自动化发布-所以新建两个task">1.创建两个task，因为我的生产不需要自动化发布  所以新建两个task</h4>
+<pre><code>apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: build-image
+spec:
+  inputs:
+    resources:
+    - name: workspace
+      type: git
+    params:
+    - name: branch
+      type: string
+      description: git-branch
+    - name: url
+      type: string
+      description: image-push-url
+    - name: uid
+      description: image-tag
+  steps:
+  - image: registry.cn-beijing.aliyuncs.com/basies/executor:v0.17.1
+    name: build-image-and-push
+    env:
+    - name: &quot;DOCKER_CONFIG&quot;
+      value: &quot;/tekton/home/.docker/&quot;
+    command:
+      - /kaniko/executor
+    args:
+      - --dockerfile=/workspace/workspace/Dockerfile
+      - --context=/workspace/workspace
+      - --destination=$(inputs.params.url):$(inputs.params.branch)-$(inputs.params.uid)
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: deploy-service
+spec:
+  inputs:
+    resources:
+    - name: workspace
+      type: git
+    params:
+    - name: branch
+      type: string
+      description: git-branch
+    - name: url
+      type: string
+      description: image-push-url
+    - name: uid
+      description: image-tag
+  steps:
+  - name: replace-name
+    image: mikefarah/yq
+    workingDir: /workspace/workspace
+    command: ['yq']
+    args: ['w', '-i', 'deploy.yaml', 'spec.template.spec.containers[0].image', '$(inputs.params.url):$(inputs.params.branch)-$(inputs.params.uid)']
+  - name: deploy-service
+    image: registry.cn-beijing.aliyuncs.com/basies/executor:kubectl
+    workingDir: /workspace/workspace
+    command: ['kubectl']
+    args: ['apply', '-f', 'deploy.yaml']
+
+ 
+</code></pre>
+<p>####2 创建触发器</p>
+<pre><code>因为我使用的是gitlab，所以需要处理一下分支的名字（字段overlays，具体意思看官方文档）
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: listener
+spec:
+  serviceAccountName: tekton-pipelines-controller  
+  triggers:
+    - name: foo-trig
+      bindings:
+        - ref: pipeline-binding
+      template:
+        name: pipeline-template
+      interceptors:
+      - cel:
+          overlays:
+          - key: extensions.branch
+            expression: &quot;body.ref.split('/')[2]&quot;
+</code></pre>
+<h4 id="3创建流水线模板">3.创建流水线模板</h4>
+<pre><code>---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: lxacc5-pipeline
+spec:
+  params:
+  - name: branch
+    type: string
+    default: &quot;develop&quot;
+  - name: url
+    type: string
+    default: &quot; &quot;
+  - name: uid
+    default: uid
+  resources:
+  - name: source-repo
+    type: git
+  tasks:
+    - name: build-image
+      taskRef:
+        name: build-image
+      resources:
+        inputs:
+        - name: workspace
+          resource: source-repo
+      params:
+      - name: branch
+        value: $(params.branch)
+      - name: url
+        value: $(params.url)
+      - name: uid
+        value: $(params.uid)
+    - name: deploy-service
+      conditions:
+      - conditionRef: is-equal
+        params:
+        - name: branch
+          value: $(params.branch)
+      taskRef:
+        name: deploy-service
+      runAfter:
+      - build-image
+      resources:
+        inputs:
+        - name: workspace
+          resource: source-repo
+      params:
+      - name: branch
+        value: $(params.branch)
+      - name: url
+        value: $(params.url)
+      - name: uid
+        value: $(params.uid)
+
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: pipeline-binding
+spec:
+  params:
+  - name: branch
+    value: $(body.extensions.branch)
+  - name: url
+    value: $(header.X-Gitlab-Token) 
+  - name: giturl
+    value: $(body.repository.git_ssh_url)
+  - name: gitname
+    value: $(body.repository.name)
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: pipeline-template
+spec:
+  params:
+  - name: branch
+  - name: url
+  - name: giturl
+  - name: gitname
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      name: $(tt.params.gitname)-$(tt.params.branch)-$(uid)
+    spec:
+      params:
+      - name: branch
+        value: $(params.branch)
+      - name: url
+        value: $(params.url)
+      - name: uid
+        value: $(uid)
+      - name: gitname
+        value: $(params.gitname)
+      serviceAccountName: tekton-pipelines-controller
+      pipelineRef:
+        name: lxacc5-pipeline
+      resources:
+      - name: source-repo
+        resourceSpec:
+          type: git
+          params:
+          - name: revision
+            value: '$(tt.params.branch)'
+          - name: url
+            value: '$(tt.params.giturl)'
+</code></pre>
+<p>####4 还需创建一个条件 当分支等于develop的时候，才需要发布</p>
+<pre><code>apiVersion: tekton.dev/v1alpha1
+kind: Condition
+metadata:
+  name: is-equal
+spec:
+  params:
+  - name: branch
+    type: string
+  check:
+    image: registry.cn-beijing.aliyuncs.com/basies/executor:alpine
+    script: |
+      #!/bin/sh
+      if [ $(params.branch) == &quot;develop&quot; -o $(params.branch) == &quot;dev&quot; ]; then
+         echo &quot;$(params.branch)&quot;
+         exit 0
+      else
+         echo &quot;$(params.branch)&quot;
+         exit 1
+      fi
+</code></pre>
+<p>####5.又新项目需要跑流水  我们只需配置gitlab的钩子就行了<br>
+url：就写自己监听器的地址<br>
+Secret Token：这里我写的是我的仓库地址<br>
+<img src="https://bibi520.github.io/post-images/1597652162161.jpg" alt="" loading="lazy"></p>
+
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://bibi520.github.io/post/istioflagger-jin-si-que-fa-bu/">
+                  <h3 class="post-title">
+                    istio+flagger金丝雀发布
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

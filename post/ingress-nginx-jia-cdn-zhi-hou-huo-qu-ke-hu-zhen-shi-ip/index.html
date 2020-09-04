@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>ingress-nginx加cdn之后获取客户真实ip 限流 | bibi</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://bibi520.github.io/favicon.ico?v=1599211274197">
+<link rel="stylesheet" href="https://bibi520.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="建议升级ingress-nginx到v30再去配置这个几个参数
+compute-full-forwarded-for: &quot;true&quot;
+forwarded-for-header: &quot;X-Forwarded-For..." />
+    <meta name="keywords" content="" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://bibi520.github.io">
+        <img src="https://bibi520.github.io/images/avatar.png?v=1599211274197" class="site-logo">
+        <h1 class="site-title">bibi</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      温故而知新
+    </div>
+    <div class="site-footer">
+      <a href="http://beian.miit.gov.cn/" target="_blank">粤ICP备20013770号-1</a> | <a class="rss" href="https://bibi520.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">ingress-nginx加cdn之后获取客户真实ip 限流</h2>
+            <div class="post-date">2020-07-23</div>
+            
+            <div class="post-content" v-pre>
+              <h4 id="建议升级ingress-nginx到v30再去配置这个几个参数">建议升级ingress-nginx到v30再去配置这个几个参数</h4>
+<p>compute-full-forwarded-for: &quot;true&quot;<br>
+forwarded-for-header: &quot;X-Forwarded-For&quot;<br>
+use-forwarded-headers: &quot;true&quot;</p>
+<h4 id="限流并修改返回的状态码">限流并修改返回的状态码</h4>
+<pre><code>    nginx.ingress.kubernetes.io/configuration-snippet: |
+      charset utf-8;
+      error_page 503 =200 /dealwith_503?callback=$arg_callback;
+      location /dealwith_503{ 
+        set $ret_body '{&quot;code&quot;: &quot;V00006&quot;,&quot;msg&quot;: &quot;操作太频繁了，请坐下来喝杯卡布奇诺。&quot;}';
+         if ( $arg_callback != &quot;&quot; ) 
+         { 
+             return 200 'try{$arg_callback($ret_body)}catch(e){}'; 
+         } 
+         return 200 $ret_body; 
+      }
+    nginx.ingress.kubernetes.io/limit-connections: '3' #每个用户的并发数
+    nginx.ingress.kubernetes.io/limit-rpm: '10'        #一个用户每分钟只能访问10次
+    nginx.ingress.kubernetes.io/limit-rps: '10'          #一个用户每秒只能访问10次
+    ```
+
+###  url 添加虚拟地址 基于url 白名单 当然还可以限速 如果没有虚拟机地址 直接根目录 请删除  nginx.ingress.kubernetes.io/rewrite-target:   nginx.ingress.kubernetes.io/use-regex: 还有path 正则表达试 
+###  整站配置
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header User-Agent &quot;&quot;;
+      proxy_set_header Accept &quot;&quot;;
+      proxy_ignore_client_abort &quot;on&quot;;
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: &quot;1800&quot;
+    nginx.ingress.kubernetes.io/proxy-read-timeout: &quot;1800&quot;
+    nginx.ingress.kubernetes.io/proxy-send-timeout: &quot;1800&quot;
+    nginx.ingress.kubernetes.io/rewrite-target: /$3
+    nginx.ingress.kubernetes.io/use-regex: &quot;true&quot;
+  generation: 17
+  name: test-weburl
+  namespace: web
+spec:
+  rules:
+  - host: testweburl.xxxxxx.com
+    http:
+      paths:
+      - backend:
+          serviceName: test-weburl
+          servicePort: 80
+        path: /(testweburl(/|$))(.*)
+---
+url 白名单配置 
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/app-root: /apps/www
+    nginx.ingress.kubernetes.io/configuration-snippet: |-
+      proxy_set_header User-Agent &quot;&quot;;
+      proxy_set_header Accept &quot;&quot;;
+      proxy_ignore_client_abort &quot;on&quot;;
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: &quot;1800&quot;
+    nginx.ingress.kubernetes.io/proxy-read-timeout: &quot;1800&quot;
+    nginx.ingress.kubernetes.io/proxy-send-timeout: &quot;1800&quot;
+    nginx.ingress.kubernetes.io/rewrite-target: /$1/$2/$3
+    nginx.ingress.kubernetes.io/use-regex: &quot;true&quot;
+    nginx.ingress.kubernetes.io/whitelist-source-range: 47.93.45.13,172.16.30.28,39.106.134.165,58.63.60.98
+  generation: 6
+  name: test-weburl-wb
+  namespace: web
+spec:
+  rules:
+  - host: testweburl.boshungame.com
+    http:
+      paths:
+      - backend:
+          serviceName: test-weburl
+          servicePort: 80
+        path: /testweburl/(test-white/test(/|$))(.*)
+      - backend:
+          serviceName: test-weburl
+          servicePort: 80
+        path: /testweburl/(test-black(/|$))(.*)
+</code></pre>
+
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://bibi520.github.io/post/prometheus-xue-xi-bi-ji/">
+                  <h3 class="post-title">
+                    Prometheus学习笔记
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

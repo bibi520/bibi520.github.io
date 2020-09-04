@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" >
+
+<title>go语言strings和 strconv包 | bibi</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css" integrity="sha384-fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="anonymous">
+<link rel="shortcut icon" href="https://bibi520.github.io/favicon.ico?v=1599211274197">
+<link rel="stylesheet" href="https://bibi520.github.io/styles/main.css">
+
+
+
+<link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+
+
+    <meta name="description" content="package main
+
+import (&quot;fmt&quot;
+		&quot;strings&quot;
+		&quot;strconv&quot;
+)
+
+func main()  {
+	name := &quot;choco..." />
+    <meta name="keywords" content="" />
+  </head>
+  <body>
+    <div id="app" class="main">
+
+      <div class="sidebar" :class="{ 'full-height': menuVisible }">
+  <div class="top-container" data-aos="fade-right">
+    <div class="top-header-container">
+      <a class="site-title-container" href="https://bibi520.github.io">
+        <img src="https://bibi520.github.io/images/avatar.png?v=1599211274197" class="site-logo">
+        <h1 class="site-title">bibi</h1>
+      </a>
+      <div class="menu-btn" @click="menuVisible = !menuVisible">
+        <div class="line"></div>
+      </div>
+    </div>
+    <div>
+      
+        
+          <a href="/" class="site-nav">
+            首页
+          </a>
+        
+      
+        
+          <a href="/archives" class="site-nav">
+            归档
+          </a>
+        
+      
+        
+          <a href="/tags" class="site-nav">
+            标签
+          </a>
+        
+      
+        
+          <a href="/post/about" class="site-nav">
+            关于
+          </a>
+        
+      
+    </div>
+  </div>
+  <div class="bottom-container" data-aos="flip-up" data-aos-offset="0">
+    <div class="social-container">
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    </div>
+    <div class="site-description">
+      温故而知新
+    </div>
+    <div class="site-footer">
+      <a href="http://beian.miit.gov.cn/" target="_blank">粤ICP备20013770号-1</a> | <a class="rss" href="https://bibi520.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+  </div>
+</div>
+
+
+      <div class="main-container">
+        <div class="content-container" data-aos="fade-up">
+          <div class="post-detail">
+            <h2 class="post-title">go语言strings和 strconv包</h2>
+            <div class="post-date">2020-04-17</div>
+            
+              <div class="feature-container" style="background-image: url('https://bibi520.github.io/post-images/go-yu-yan-strings-he-strconv-bao.jpg')">
+              </div>
+            
+            <div class="post-content" v-pre>
+              <pre><code>package main
+
+import (&quot;fmt&quot;
+		&quot;strings&quot;
+		&quot;strconv&quot;
+)
+
+func main()  {
+	name := &quot;chocolate&quot;
+	//HasPrefix判断字符串s是否以perfix开头
+	fmt.Println(strings.HasPrefix(name,&quot;na&quot;))
+
+	//HasSuffix判断字符串s是否以suffix结尾
+	fmt.Println(strings.HasSuffix(name,&quot;na&quot;))
+
+	//Contains判断字符串s是否包含substr
+	fmt.Println(strings.Contains(name,&quot;na&quot;))
+
+	//Index判断字符串str在字符串s出现位置的索引
+	fmt.Println(strings.Index(name,&quot;a&quot;))
+
+	//LasIndex判断字符串str在字符串s最后出现位置的索引
+	fmt.Println(strings.LastIndex(name,&quot;a&quot;))
+
+	//Replace用于将字符串 str 中的前 n 个字符串 old 替换为字符串 new，并返回一个新的字符串，如果 n = -1 则替换所有字符串 old 为字符串 new
+	fmt.Println(strings.Replace(name,&quot;'c&quot;,&quot;a&quot;,6))
+
+	//Count用于计算字符串 str 在字符串 s 中出现的非重叠次数
+	fmt.Println(strings.Count(name,&quot;o&quot;))
+
+	//Repeat用于重复 count 次字符串 s 并返回一个新的字符串
+	fmt.Println(strings.Repeat(name,3))
+
+	//ToLower将字符串中的 Unicode 字符全部转换为相应的小写字符
+	fmt.Println(strings.ToLower(name))
+
+	//ToUpper将字符串中的 Unicode 字符全部转换为相应的大写字符
+	fmt.Println(strings.ToUpper(name))
+
+	/*你可以使用 strings.TrimSpace(s) 来剔除字符串开头和结尾的空白符号；
+	  如果你想要剔除指定字符，则可以使用 strings.Trim(s, &quot;cut&quot;) 来将开头和结尾的 cut 去除掉。
+	 该函数的第二个参数可以包含任何字符，如果你只想剔除开头或者结尾的字符串，则可以使用 TrimLeft 或者 TrimRight 来实现*/
+	fmt.Println(strings.TrimSpace(name))
+	fmt.Println(strings.Trim(name,&quot;a&quot;))
+	fmt.Println(strings.TrimLeft(name,&quot;a&quot;))
+	fmt.Println(strings.TrimRight(name,&quot;a&quot;))
+
+	//分割字符串
+	/* strings.Fields(s) 默认以空白符为分隔符
+	   strings.Split(s, sep) 用于自定义分割符号来对指定字符串进行分割，同样返回 slice。
+	   strings.Join(sl []string, sep string) string 用于将元素类型为 string 的 slice 使用分割符号来拼接组成一个字符串
+	 */
+	str := &quot;The quick brown fox jumps over the lazy dog&quot;
+	sl := strings.Fields(str)
+	fmt.Printf(&quot;Splitted in slice: %v\n&quot;, sl)
+	for _, val := range sl {
+		fmt.Printf(&quot;%s - &quot;, val)
+	}
+	fmt.Println()
+	str2 := &quot;GO1|The ABC of Go|25&quot;
+	sl2 := strings.Split(str2, &quot;|&quot;)
+	fmt.Printf(&quot;Splitted in slice: %v\n&quot;, sl2)
+	for _, val := range sl2 {
+		fmt.Printf(&quot;%s - &quot;, val)
+	}
+	fmt.Println()
+	str3 := strings.Join(sl2,&quot;;&quot;)
+	fmt.Printf(&quot;sl2 joined by ;: %s\n&quot;, str3)
+
+	//strconv字符串与其他类型的转换
+	strconv.Itoa(1)  //将int类型转换为string类型
+	strconv.Atoi(name) //将string类型转换为int类型
+}
+</code></pre>
+
+            </div>
+            
+            
+              <div class="next-post">
+                <div class="next">下一篇</div>
+                <a href="https://bibi520.github.io/post/gitlab-qian-yi-hui-fu/">
+                  <h3 class="post-title">
+                    gitlab迁移恢复
+                  </h3>
+                </a>
+              </div>
+            
+
+            
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+<script type="application/javascript">
+
+AOS.init();
+
+var app = new Vue({
+  el: '#app',
+  data: {
+    menuVisible: false,
+  },
+})
+
+</script>
+
+
+  <script src="https://cdn.bootcss.com/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad()
+  </script>
+
+
+
+
+
+  </body>
+</html>

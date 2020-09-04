@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://bibi520.github.io</id>
     <title>bibi</title>
-    <updated>2020-04-08T09:26:30.524Z</updated>
+    <updated>2020-09-04T09:22:07.111Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://bibi520.github.io"/>
     <link rel="self" href="https://bibi520.github.io/atom.xml"/>
@@ -10,6 +10,776 @@
     <logo>https://bibi520.github.io/images/avatar.png</logo>
     <icon>https://bibi520.github.io/favicon.ico</icon>
     <rights>All rights reserved 2020, bibi</rights>
+    <entry>
+        <title type="html"><![CDATA[filebeat+logstash+es+kibana收集ingress日志]]></title>
+        <id>https://bibi520.github.io/post/filebeatlogstasheskibana-shou-ji-ingress-ri-zhi/</id>
+        <link href="https://bibi520.github.io/post/filebeatlogstasheskibana-shou-ji-ingress-ri-zhi/">
+        </link>
+        <updated>2020-09-04T09:02:27.000Z</updated>
+        <content type="html"><![CDATA[<p>####1.需要修改nginx-ingress日志格式为json格式</p>
+<pre><code>{&quot;time&quot;: &quot;$time_iso8601&quot;, &quot;remote_addr&quot;: &quot;$proxy_protocol_addr&quot;, &quot;x-forward-for&quot;: &quot;$proxy_add_x_forwarded_for&quot;, &quot;request_id&quot;: &quot;$req_id&quot;, &quot;remote_user&quot;: &quot;$remote_user&quot;, &quot;bytes_sent&quot;: $bytes_sent, &quot;request_time&quot;: $request_time, &quot;status&quot;:$status, &quot;vhost&quot;: &quot;$host&quot;, &quot;request_proto&quot;: &quot;$server_protocol&quot;, &quot;path&quot;: &quot;$uri&quot;, &quot;request_query&quot;: &quot;$args&quot;, &quot;request_length&quot;: $request_length, &quot;duration&quot;: $request_time,&quot;method&quot;: &quot;$request_method&quot;, &quot;http_referrer&quot;: &quot;$http_referer&quot;, &quot;proxy_upstream_name&quot;: &quot;$proxy_upstream_name&quot;,&quot;upstream_addr&quot;: &quot;$upstream_addr&quot;,&quot;upstream_status&quot;: &quot;$upstream_status&quot;,&quot;http_user_agent&quot;: &quot;$http_user_agent&quot;}
+</code></pre>
+<h3 id="2配置filebeat">2.配置filebeat</h3>
+<pre><code>    filebeat.config:
+      modules:
+        path: ${path.config}/modules.d/*.yml
+        reload.enabled: true
+        reload.period: 10s
+    filebeat.inputs:
+    - containers.ids:
+      - '*'
+      json.keys_under_root: true
+      json.ignore_decoding_error: true
+      processors:
+      - add_tags:
+          tags: [&quot;nginx-log&quot;]
+      - add_kubernetes_metadata:
+          in_cluster: true
+      - drop_event:
+          when:
+            not:
+              equals:
+                kubernetes.container.name: ack-ingress-nginx-controller
+      type: docker
+
+          http.enabled: true
+    http.port: 5066
+#    output.file:
+#      filename: filebeat
+#      number_of_files: 5
+#      path: /usr/share/filebeat/data
+#      rotate_every_kb: 10000
+    output.logstash:
+       hosts: [&quot;logstash:5044&quot;]
+    processors:
+    - add_cloud_metadata: null
+</code></pre>
+<p>###3.logstash配置文件</p>
+<pre><code>output {
+ stdout { codec =&gt; rubydebug }
+   elasticsearch {
+    hosts =&gt; [&quot;${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}&quot;]
+    user =&gt; &quot;elastic-internal&quot;
+    password =&gt; &quot;Rk2x7s5Y4Y9y9O91YgrUPs49&quot;
+    manage_template =&gt; false
+    index =&gt; &quot;logstash-nginx-%{+YYYY.MM.dd}&quot;
+  }
+}
+
+input {
+  beats {
+    port =&gt; 5044
+  }
+}
+
+#剔除一些不必要的字段
+filter{
+    mutate{
+        remove_field =&gt; [&quot;host&quot;]
+        remove_field =&gt; [&quot;agent&quot;]
+        remove_field =&gt; [&quot;ecs&quot;]
+        remove_field =&gt; [&quot;tags&quot;]
+        remove_field =&gt; [&quot;fields&quot;]
+        remove_field =&gt; [&quot;@version&quot;]
+#        remove_field =&gt; [&quot;@timestamp&quot;]
+        remove_field =&gt; [&quot;input&quot;]
+        remove_field =&gt; [&quot;log&quot;]
+        remove_field =&gt; [&quot;kubernetes&quot;]
+    }
+    geoip{
+       source =&gt; &quot;x-forward-for&quot;
+       target =&gt; &quot;geoip&quot;
+       database =&gt; &quot;/usr/share/logstash/data/geoip/GeoLite2-City.mmdb&quot;
+    } 
+}
+</code></pre>
+<p>4.结果<br>
+<img src="https://bibi520.github.io/post-images/1599211263143.png" alt="" loading="lazy"></p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[logstash学习]]></title>
+        <id>https://bibi520.github.io/post/logstash-xue-xi/</id>
+        <link href="https://bibi520.github.io/post/logstash-xue-xi/">
+        </link>
+        <updated>2020-09-02T11:47:03.000Z</updated>
+        <content type="html"><![CDATA[<pre><code>input{
+	file{
+		#注意文件路径名需要绝对路径
+		path =&gt; &quot;E:/nginx/logs/error.log&quot; 
+		#如果想要监听多个目标文件可以改成数组
+		path =&gt; [&quot;E:/nginx/logs/error.log&quot;,&quot;E:/nginx/logs/access.log&quot;]
+		#排除不想监听的文件(支持字符串或者数组，但是要求必须是绝对路径)
+		exclude =&gt; &quot;E:/nginx/logs/other.log&quot;
+		
+		#添加自定义字段
+		add_field =&gt; {&quot;atack&quot;=&gt;&quot;atack&quot;}
+		#增加标签(这个标签可能在后续的处理中起到标志的作用
+		tags =&gt; &quot;shooter_tag&quot;
+		
+		#设置新事件标志
+		delimiter =&gt; &quot;\n&quot;
+		
+		#设置多长事件扫描目录,发现新文件
+		discover_interval =&gt; 15
+		#设置多长时间检测文件是否被修改
+		stat_interval =&gt; 1
+		
+		#监听文件起始位置，beginning 表示【第一次】启动从文件头开始读取，后面动态读取；end表示从文件尾开始（类似tail -f）。
+		start_position =&gt; beginning 
+		
+		#sincedb保存每个日志文件已经被读取到的位置,如果Logstash重启,对于同一个文件,会继续从上次记录的位置开始读取。如果想重新从头读取文件,需要删除sincedb文件.如果设置为&quot;/dev/null&quot;,即不保存位置信息。
+		sincedb_path =&gt; &quot;E:\logstash\stat\test.txt&quot;
+		#设置多久会写入读取位置信息
+		sincedb_write_interval =&gt; 15
+		
+		#编码插件Codec
+		#1.如果事件数据是json格式,可以加入codec=&gt;json来进行解析 
+		#2.如果你的json文件比较长,需要换行的话,那么就得用到json_lines{}了
+		#3.multiline 多行事件有时候有的日志用多行去展现,这么多行其实都是一个事件(比如JAVA的异常日志)  
+		codec =&gt; multiline {
+            pattern =&gt; &quot;^\d&quot;
+            negate =&gt; true
+            what =&gt; &quot;previous&quot;  #未匹配的内容向前合并
+        }
+#设置输入规则
+        codec2
+        codec =&gt; multiline {
+            #利用正则匹配规则，匹配每一行开始的位置，这里匹配每一行开始的位置为数字
+            pattern =&gt; &quot;^[0-9]&quot;
+     
+            #true表示不匹配正则表达式，false为匹配正则表达式，默认false
+            #如果不匹配，则会结合what参数，进行合并操作
+            negate =&gt; true
+            
+            #what可设置previous和next，previous则表示将所有不匹配的数据都合并到上一个正则事件
+            #而next则相反，将所有的不匹配的数据都合并到下一个正则事件
+            what =&gt; &quot;previous&quot;
+ 
+            #表示当多长时间没有新的数据，最后一个正则匹配积累的多行数据都归属为最后一个事件，这里的10表示10秒
+            #auto_flush_interval =&gt; 10
+       }
+ 
+			
+	}
+}
+</code></pre>
+<pre><code>filter {
+    #在json化之前,使用mutte对\\x字符串进行替换，防止以下错误：ParserError: Unrecognized character escape 'x' (code 120)
+    mutate {
+        gsub =&gt; [&quot;message&quot;, &quot;\\x&quot;, &quot;\\\x&quot;]
+    }
+    json {
+        source =&gt; &quot;message&quot;
+        #删除无用字段，节约空间
+        remove_field =&gt; &quot;message&quot;
+        remove_field =&gt; &quot;severity&quot;
+        remove_field =&gt; &quot;pid&quot;
+        remove_field =&gt; &quot;logsource&quot;
+        remove_field =&gt; &quot;timestamp&quot;
+        remove_field =&gt; &quot;facility_label&quot;
+        remove_field =&gt; &quot;type&quot;
+        remove_field =&gt; &quot;facility&quot;
+        remove_field =&gt; &quot;@version&quot;
+        remove_field =&gt; &quot;priority&quot;
+        remove_field =&gt; &quot;severity_label&quot;
+    }
+    date {
+        #用nginx请求时间替换logstash生成的时间
+        match =&gt; [&quot;time_local&quot;, &quot;ISO8601&quot;]
+        target =&gt; &quot;@timestamp&quot;
+    }
+    grok {
+        #从时间中获取day
+        match =&gt; { &quot;time_local&quot; =&gt; &quot;(?&lt;day&gt;.{10})&quot; }
+    }
+    grok {
+        #将request解析成2个字段：method\url
+        match =&gt; { &quot;request&quot; =&gt; &quot;%{WORD:method} (?&lt;url&gt;.* )&quot; }
+    }
+    grok {
+        #截取http_referer问号前的部分，问号后的信息无价值，浪费空间
+        match =&gt; { &quot;http_referer&quot; =&gt; &quot;(?&lt;referer&gt;-|%{URIPROTO}://(?:%{USER}(?::[^@]*)?@)?(?:%{URIHOST})?)&quot; }
+    }
+    mutate {
+        #解析出新的字段后，原字段丢弃
+        remove_field =&gt; &quot;request&quot;
+        remove_field =&gt; &quot;http_referer&quot;
+		#rename重命名某个字段，如果目的字段已经存在，会被覆盖掉：
+        rename =&gt; { &quot;http_user_agent&quot; =&gt; &quot;agent&quot; }
+        rename =&gt; { &quot;upstream_response_time&quot; =&gt; &quot;response_time&quot; }
+        rename =&gt; { &quot;host&quot; =&gt; &quot;log_source&quot; }
+        rename =&gt; { &quot;http_x_forwarded_for&quot; =&gt; &quot;x_forwarded_for&quot; }
+        #以下2个字段以逗号分隔后，以数组形式入库
+        split =&gt; { &quot;x_forwarded_for&quot; =&gt; &quot;, &quot; }
+        split =&gt; { &quot;response_time&quot; =&gt; &quot;, &quot; }
+    }
+    #alter {
+    #    #不满足elasticsearch索引模型的，入库会失败，因此做以下数据转换
+    #    condrewrite =&gt; [
+    #        &quot;x_forwarded_for&quot;, &quot;-&quot;, &quot;0.0.0.0&quot;,
+    #        &quot;x_forwarded_for&quot;, &quot;unknown&quot;, &quot;0.0.0.0&quot;,
+    #        &quot;response_time&quot;, &quot;-&quot;, &quot;0&quot;,
+    #        &quot;real_ip&quot;, &quot;&quot;, &quot;0.0.0.0&quot;
+    #    ]
+    #}
+}
+</code></pre>
+<pre><code>#(将日志文件按template指定个数输出到nginx_to_logs索引)
+output { #入库，以template指定的模型作为索引模型 
+    elasticsearch { 
+        hosts =&gt; [&quot;172.17.0.3:9200&quot;]
+		#es要执行的动作 index, delete, create, update
+		#1.index:将logstash.时间索引到一个文档
+		#2.delete:根据id删除一个document(这个动作需要一个id)
+		#3.create:建立一个索引document，如果id存在动作失败.
+		#4.update:根据id更新一个document，有一种特殊情况可以upsert--如果document不是已经存在的情况更新document 。参见upsert选项。
+		action=&gt;&quot;index&quot;
+		
+		#为索引提供document id,对重写elasticsearch中相同id词目很有用（但是小心这个id如果重复会让你只能获取到日志的最后一条信息,一般不要设置这个选项,系统会默认随机生成id）
+		document_id=&gt; &quot;igshooter&quot;
+		
+		#事件要被写入的document type,一般要将相似事件写入同一type,可用%{}引用事件type,默认type=log
+		#document_type=&gt; &quot;&quot;
+		
+        index =&gt; &quot;nginx_to_logs&quot; #事件要被写进的索引,这里的索引要es已创建，没创建是没用的es也搜不到的
+		
+        user =&gt; elastic
+        password =&gt; changeme
+		
+		#一个默认的es mapping 模板将启用（除非设置为false,他就会用自己的template）
+        manage_template =&gt; true
+		
+        template_overwrite =&gt; true
+		#在es内部模板的名字(这个名字可以随意取)
+        template_name =&gt; &quot;mynginx&quot;
+		#有效的filepath 设置自己的template文件路径，不设置就用已有的 (这个文件里的template:索引名称必须和 index设置的索引名称一致，或者包含*)
+        template =&gt; &quot;/opt/logstash-5.6.4/template/mynginxtemplate.json&quot;
+        codec =&gt; json #使用codec的json格式输出
+		
+		#这里需要十分注意的一个问题是,document_id尽量保证值得唯一,这样会解决你面即将面临的ES数据重复问题,切记切记!
+    }
+    #本地文件放一份，作为ELK的补充
+    file {
+        flush_interval =&gt; 600
+        path =&gt; '/home/nginxlog/%{day}/%{domain}.log'
+        codec =&gt; line { format =&gt; '&lt;%{time_local}&gt; &lt;%{real_ip}&gt; &lt;%{method}&gt; &lt;%{url}&gt; &lt;%{status}&gt; &lt;%{request_time}&gt; &lt;%{response_time}&gt; &lt;%{body_bytes_sent}&gt; &lt;%{request_body}&gt; &lt;%{referer}&gt; &lt;%{x_f
+orwarded_for}&gt; &lt;%{log_source}&gt; &lt;%{agent}&gt;'}
+    }
+}
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[tekton通用模板]]></title>
+        <id>https://bibi520.github.io/post/tekton-tong-yong-mo-ban/</id>
+        <link href="https://bibi520.github.io/post/tekton-tong-yong-mo-ban/">
+        </link>
+        <updated>2020-08-17T08:04:46.000Z</updated>
+        <content type="html"><![CDATA[<h4 id="1创建两个task因为我的生产不需要自动化发布-所以新建两个task">1.创建两个task，因为我的生产不需要自动化发布  所以新建两个task</h4>
+<pre><code>apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: build-image
+spec:
+  inputs:
+    resources:
+    - name: workspace
+      type: git
+    params:
+    - name: branch
+      type: string
+      description: git-branch
+    - name: url
+      type: string
+      description: image-push-url
+    - name: uid
+      description: image-tag
+  steps:
+  - image: registry.cn-beijing.aliyuncs.com/basies/executor:v0.17.1
+    name: build-image-and-push
+    env:
+    - name: &quot;DOCKER_CONFIG&quot;
+      value: &quot;/tekton/home/.docker/&quot;
+    command:
+      - /kaniko/executor
+    args:
+      - --dockerfile=/workspace/workspace/Dockerfile
+      - --context=/workspace/workspace
+      - --destination=$(inputs.params.url):$(inputs.params.branch)-$(inputs.params.uid)
+---
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: deploy-service
+spec:
+  inputs:
+    resources:
+    - name: workspace
+      type: git
+    params:
+    - name: branch
+      type: string
+      description: git-branch
+    - name: url
+      type: string
+      description: image-push-url
+    - name: uid
+      description: image-tag
+  steps:
+  - name: replace-name
+    image: mikefarah/yq
+    workingDir: /workspace/workspace
+    command: ['yq']
+    args: ['w', '-i', 'deploy.yaml', 'spec.template.spec.containers[0].image', '$(inputs.params.url):$(inputs.params.branch)-$(inputs.params.uid)']
+  - name: deploy-service
+    image: registry.cn-beijing.aliyuncs.com/basies/executor:kubectl
+    workingDir: /workspace/workspace
+    command: ['kubectl']
+    args: ['apply', '-f', 'deploy.yaml']
+
+ 
+</code></pre>
+<p>####2 创建触发器</p>
+<pre><code>因为我使用的是gitlab，所以需要处理一下分支的名字（字段overlays，具体意思看官方文档）
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: listener
+spec:
+  serviceAccountName: tekton-pipelines-controller  
+  triggers:
+    - name: foo-trig
+      bindings:
+        - ref: pipeline-binding
+      template:
+        name: pipeline-template
+      interceptors:
+      - cel:
+          overlays:
+          - key: extensions.branch
+            expression: &quot;body.ref.split('/')[2]&quot;
+</code></pre>
+<h4 id="3创建流水线模板">3.创建流水线模板</h4>
+<pre><code>---
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: lxacc5-pipeline
+spec:
+  params:
+  - name: branch
+    type: string
+    default: &quot;develop&quot;
+  - name: url
+    type: string
+    default: &quot; &quot;
+  - name: uid
+    default: uid
+  resources:
+  - name: source-repo
+    type: git
+  tasks:
+    - name: build-image
+      taskRef:
+        name: build-image
+      resources:
+        inputs:
+        - name: workspace
+          resource: source-repo
+      params:
+      - name: branch
+        value: $(params.branch)
+      - name: url
+        value: $(params.url)
+      - name: uid
+        value: $(params.uid)
+    - name: deploy-service
+      conditions:
+      - conditionRef: is-equal
+        params:
+        - name: branch
+          value: $(params.branch)
+      taskRef:
+        name: deploy-service
+      runAfter:
+      - build-image
+      resources:
+        inputs:
+        - name: workspace
+          resource: source-repo
+      params:
+      - name: branch
+        value: $(params.branch)
+      - name: url
+        value: $(params.url)
+      - name: uid
+        value: $(params.uid)
+
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: pipeline-binding
+spec:
+  params:
+  - name: branch
+    value: $(body.extensions.branch)
+  - name: url
+    value: $(header.X-Gitlab-Token) 
+  - name: giturl
+    value: $(body.repository.git_ssh_url)
+  - name: gitname
+    value: $(body.repository.name)
+---
+apiVersion: triggers.tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: pipeline-template
+spec:
+  params:
+  - name: branch
+  - name: url
+  - name: giturl
+  - name: gitname
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1beta1
+    kind: PipelineRun
+    metadata:
+      name: $(tt.params.gitname)-$(tt.params.branch)-$(uid)
+    spec:
+      params:
+      - name: branch
+        value: $(params.branch)
+      - name: url
+        value: $(params.url)
+      - name: uid
+        value: $(uid)
+      - name: gitname
+        value: $(params.gitname)
+      serviceAccountName: tekton-pipelines-controller
+      pipelineRef:
+        name: lxacc5-pipeline
+      resources:
+      - name: source-repo
+        resourceSpec:
+          type: git
+          params:
+          - name: revision
+            value: '$(tt.params.branch)'
+          - name: url
+            value: '$(tt.params.giturl)'
+</code></pre>
+<p>####4 还需创建一个条件 当分支等于develop的时候，才需要发布</p>
+<pre><code>apiVersion: tekton.dev/v1alpha1
+kind: Condition
+metadata:
+  name: is-equal
+spec:
+  params:
+  - name: branch
+    type: string
+  check:
+    image: registry.cn-beijing.aliyuncs.com/basies/executor:alpine
+    script: |
+      #!/bin/sh
+      if [ $(params.branch) == &quot;develop&quot; -o $(params.branch) == &quot;dev&quot; ]; then
+         echo &quot;$(params.branch)&quot;
+         exit 0
+      else
+         echo &quot;$(params.branch)&quot;
+         exit 1
+      fi
+</code></pre>
+<p>####5.又新项目需要跑流水  我们只需配置gitlab的钩子就行了<br>
+url：就写自己监听器的地址<br>
+Secret Token：这里我写的是我的仓库地址<br>
+<img src="https://bibi520.github.io/post-images/1597652162161.jpg" alt="" loading="lazy"></p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[istio+flagger金丝雀发布]]></title>
+        <id>https://bibi520.github.io/post/istioflagger-jin-si-que-fa-bu/</id>
+        <link href="https://bibi520.github.io/post/istioflagger-jin-si-que-fa-bu/">
+        </link>
+        <updated>2020-07-27T03:32:25.000Z</updated>
+        <content type="html"><![CDATA[<h4 id="1安装flagger">1.安装flagger</h4>
+<p>slack申请<a href="https://app.slack.com/">地址</a></p>
+<pre><code>helm repo add flagger https://flagger.app
+
+kubectl apply -f https://raw.githubusercontent.com/weaveworks/flagger/master/artifacts/flagger/crd.yaml
+
+helm upgrade -i flagger flagger/flagger \
+--namespace=istio-system \
+--set crd.create=false \
+--set metricsServer=http://prometheus.istio-system:9090 \
+--set slack.url=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK \
+--set slack.channel=general \
+--set slack.user=flagger
+</code></pre>
+<h4 id="2添加一个需要金丝雀发布的deployment">2.添加一个需要金丝雀发布的deployment</h4>
+<pre><code>apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: nginx
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: nginx
+  service:
+    port: 80
+    gateways:
+    - mesh
+    hosts:
+    - nginx
+  analysis:
+    interval: 10s
+    threshold: 10
+    maxWeight: 50
+    stepWeight: 5
+    metrics:
+      - name: istio_requests_total
+        thresholdRange:
+          min: 99
+        interval: 30s
+      - name: istio_request_duration_seconds_bucket
+        thresholdRange:
+          max: 500
+        interval: 30s
+    webhooks:
+      - name: load-test
+        url: http://flagger-loadtester.argo/
+        metadata:
+          cmd: &quot;hey -z 1m -q 10 -c 2 http://nginx/&quot;
+</code></pre>
+<p>需要注意：</p>
+<ol>
+<li>metrics必须是prometheus的监控指标</li>
+<li>flagger-loadtester需要<a href="https://docs.flagger.app/usage/webhooks">安装</a></li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[ingress-nginx加cdn之后获取客户真实ip 限流]]></title>
+        <id>https://bibi520.github.io/post/ingress-nginx-jia-cdn-zhi-hou-huo-qu-ke-hu-zhen-shi-ip/</id>
+        <link href="https://bibi520.github.io/post/ingress-nginx-jia-cdn-zhi-hou-huo-qu-ke-hu-zhen-shi-ip/">
+        </link>
+        <updated>2020-07-23T09:44:20.000Z</updated>
+        <content type="html"><![CDATA[<h4 id="建议升级ingress-nginx到v30再去配置这个几个参数">建议升级ingress-nginx到v30再去配置这个几个参数</h4>
+<p>compute-full-forwarded-for: &quot;true&quot;<br>
+forwarded-for-header: &quot;X-Forwarded-For&quot;<br>
+use-forwarded-headers: &quot;true&quot;</p>
+<h4 id="限流并修改返回的状态码">限流并修改返回的状态码</h4>
+<pre><code>    nginx.ingress.kubernetes.io/configuration-snippet: |
+      charset utf-8;
+      error_page 503 =200 /dealwith_503?callback=$arg_callback;
+      location /dealwith_503{ 
+        set $ret_body '{&quot;code&quot;: &quot;V00006&quot;,&quot;msg&quot;: &quot;操作太频繁了，请坐下来喝杯卡布奇诺。&quot;}';
+         if ( $arg_callback != &quot;&quot; ) 
+         { 
+             return 200 'try{$arg_callback($ret_body)}catch(e){}'; 
+         } 
+         return 200 $ret_body; 
+      }
+    nginx.ingress.kubernetes.io/limit-connections: '3' #每个用户的并发数
+    nginx.ingress.kubernetes.io/limit-rpm: '10'        #一个用户每分钟只能访问10次
+    nginx.ingress.kubernetes.io/limit-rps: '10'          #一个用户每秒只能访问10次
+    ```
+
+###  url 添加虚拟地址 基于url 白名单 当然还可以限速 如果没有虚拟机地址 直接根目录 请删除  nginx.ingress.kubernetes.io/rewrite-target:   nginx.ingress.kubernetes.io/use-regex: 还有path 正则表达试 
+###  整站配置
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header User-Agent &quot;&quot;;
+      proxy_set_header Accept &quot;&quot;;
+      proxy_ignore_client_abort &quot;on&quot;;
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: &quot;1800&quot;
+    nginx.ingress.kubernetes.io/proxy-read-timeout: &quot;1800&quot;
+    nginx.ingress.kubernetes.io/proxy-send-timeout: &quot;1800&quot;
+    nginx.ingress.kubernetes.io/rewrite-target: /$3
+    nginx.ingress.kubernetes.io/use-regex: &quot;true&quot;
+  generation: 17
+  name: test-weburl
+  namespace: web
+spec:
+  rules:
+  - host: testweburl.xxxxxx.com
+    http:
+      paths:
+      - backend:
+          serviceName: test-weburl
+          servicePort: 80
+        path: /(testweburl(/|$))(.*)
+---
+url 白名单配置 
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/app-root: /apps/www
+    nginx.ingress.kubernetes.io/configuration-snippet: |-
+      proxy_set_header User-Agent &quot;&quot;;
+      proxy_set_header Accept &quot;&quot;;
+      proxy_ignore_client_abort &quot;on&quot;;
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: &quot;1800&quot;
+    nginx.ingress.kubernetes.io/proxy-read-timeout: &quot;1800&quot;
+    nginx.ingress.kubernetes.io/proxy-send-timeout: &quot;1800&quot;
+    nginx.ingress.kubernetes.io/rewrite-target: /$1/$2/$3
+    nginx.ingress.kubernetes.io/use-regex: &quot;true&quot;
+    nginx.ingress.kubernetes.io/whitelist-source-range: 47.93.45.13,172.16.30.28,39.106.134.165,58.63.60.98
+  generation: 6
+  name: test-weburl-wb
+  namespace: web
+spec:
+  rules:
+  - host: testweburl.boshungame.com
+    http:
+      paths:
+      - backend:
+          serviceName: test-weburl
+          servicePort: 80
+        path: /testweburl/(test-white/test(/|$))(.*)
+      - backend:
+          serviceName: test-weburl
+          servicePort: 80
+        path: /testweburl/(test-black(/|$))(.*)
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Prometheus学习笔记]]></title>
+        <id>https://bibi520.github.io/post/prometheus-xue-xi-bi-ji/</id>
+        <link href="https://bibi520.github.io/post/prometheus-xue-xi-bi-ji/">
+        </link>
+        <updated>2020-07-13T01:48:06.000Z</updated>
+        <content type="html"><![CDATA[<h3 id="prometheus数据类型">Prometheus数据类型</h3>
+<ol>
+<li>Counter（计数器类型）</li>
+<li>Guage（仪表盘类型）</li>
+<li>Histogram（直方图类型）</li>
+<li>Summary（摘要类型）</li>
+</ol>
+<h3 id="时间序列过滤器">时间序列过滤器</h3>
+<ol>
+<li>瞬时向量过滤器<br>
+=      : 选择与提供的字符串完全相同的标签。<br>
+!=     : 选择与提供的字符串不相同的标签。<br>
+=~    : 选择正则表达式与提供的字符串（或子字符串）相匹配的标签。<br>
+!~      : 选择正则表达式与提供的字符串（或子字符串）不匹配的标签。<br>
+http_requests_total{environment=~&quot;staging|testing|development&quot;,method!=&quot;GET&quot;}</li>
+<li>区间向量过滤器<br>
+http_requests_total{job=&quot;prometheus&quot;}[5m]</li>
+<li>时间位移操作<br>
+http_request_total{} # 瞬时向量表达式，选择当前最新的数据<br>
+http_request_total{}[5m] # 区间向量表达式，选择以当前时间为基准，5分钟内的数据</li>
+</ol>
+<h3 id="offset-查询之前的数据">offset： 查询之前的数据</h3>
+<p>注意：offset 关键字需要紧跟在选择器（{}）后面。以下表达式是正确的：<br>
+<code>sum(http_requests_total{method=&quot;GET&quot;} offset 5m) // GOOD.</code><br>
+该操作同样适用于区间向量。以下表达式返回指标 http_requests_total 一周前的 5 分钟之内的 HTTP 请求量的增长率：<br>
+<code>rate(http_requests_total[5m] offset 1w)</code></p>
+<h3 id="内置的聚合操作">内置的聚合操作</h3>
+<pre><code>sum (求和)
+min (最小值)
+max (最大值)
+avg (平均值)
+stddev (标准差)
+stdvar (标准差异)
+count (计数)
+count_values (对 value 进行计数)
+bottomk (样本值最小的 k 个元素)
+topk (样本值最大的k个元素)
+quantile (分布统计)
+</code></pre>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[go语言strings和 strconv包]]></title>
+        <id>https://bibi520.github.io/post/go-yu-yan-strings-he-strconv-bao/</id>
+        <link href="https://bibi520.github.io/post/go-yu-yan-strings-he-strconv-bao/">
+        </link>
+        <updated>2020-04-17T08:16:29.000Z</updated>
+        <content type="html"><![CDATA[<pre><code>package main
+
+import (&quot;fmt&quot;
+		&quot;strings&quot;
+		&quot;strconv&quot;
+)
+
+func main()  {
+	name := &quot;chocolate&quot;
+	//HasPrefix判断字符串s是否以perfix开头
+	fmt.Println(strings.HasPrefix(name,&quot;na&quot;))
+
+	//HasSuffix判断字符串s是否以suffix结尾
+	fmt.Println(strings.HasSuffix(name,&quot;na&quot;))
+
+	//Contains判断字符串s是否包含substr
+	fmt.Println(strings.Contains(name,&quot;na&quot;))
+
+	//Index判断字符串str在字符串s出现位置的索引
+	fmt.Println(strings.Index(name,&quot;a&quot;))
+
+	//LasIndex判断字符串str在字符串s最后出现位置的索引
+	fmt.Println(strings.LastIndex(name,&quot;a&quot;))
+
+	//Replace用于将字符串 str 中的前 n 个字符串 old 替换为字符串 new，并返回一个新的字符串，如果 n = -1 则替换所有字符串 old 为字符串 new
+	fmt.Println(strings.Replace(name,&quot;'c&quot;,&quot;a&quot;,6))
+
+	//Count用于计算字符串 str 在字符串 s 中出现的非重叠次数
+	fmt.Println(strings.Count(name,&quot;o&quot;))
+
+	//Repeat用于重复 count 次字符串 s 并返回一个新的字符串
+	fmt.Println(strings.Repeat(name,3))
+
+	//ToLower将字符串中的 Unicode 字符全部转换为相应的小写字符
+	fmt.Println(strings.ToLower(name))
+
+	//ToUpper将字符串中的 Unicode 字符全部转换为相应的大写字符
+	fmt.Println(strings.ToUpper(name))
+
+	/*你可以使用 strings.TrimSpace(s) 来剔除字符串开头和结尾的空白符号；
+	  如果你想要剔除指定字符，则可以使用 strings.Trim(s, &quot;cut&quot;) 来将开头和结尾的 cut 去除掉。
+	 该函数的第二个参数可以包含任何字符，如果你只想剔除开头或者结尾的字符串，则可以使用 TrimLeft 或者 TrimRight 来实现*/
+	fmt.Println(strings.TrimSpace(name))
+	fmt.Println(strings.Trim(name,&quot;a&quot;))
+	fmt.Println(strings.TrimLeft(name,&quot;a&quot;))
+	fmt.Println(strings.TrimRight(name,&quot;a&quot;))
+
+	//分割字符串
+	/* strings.Fields(s) 默认以空白符为分隔符
+	   strings.Split(s, sep) 用于自定义分割符号来对指定字符串进行分割，同样返回 slice。
+	   strings.Join(sl []string, sep string) string 用于将元素类型为 string 的 slice 使用分割符号来拼接组成一个字符串
+	 */
+	str := &quot;The quick brown fox jumps over the lazy dog&quot;
+	sl := strings.Fields(str)
+	fmt.Printf(&quot;Splitted in slice: %v\n&quot;, sl)
+	for _, val := range sl {
+		fmt.Printf(&quot;%s - &quot;, val)
+	}
+	fmt.Println()
+	str2 := &quot;GO1|The ABC of Go|25&quot;
+	sl2 := strings.Split(str2, &quot;|&quot;)
+	fmt.Printf(&quot;Splitted in slice: %v\n&quot;, sl2)
+	for _, val := range sl2 {
+		fmt.Printf(&quot;%s - &quot;, val)
+	}
+	fmt.Println()
+	str3 := strings.Join(sl2,&quot;;&quot;)
+	fmt.Printf(&quot;sl2 joined by ;: %s\n&quot;, str3)
+
+	//strconv字符串与其他类型的转换
+	strconv.Itoa(1)  //将int类型转换为string类型
+	strconv.Atoi(name) //将string类型转换为int类型
+}
+</code></pre>
+]]></content>
+    </entry>
     <entry>
         <title type="html"><![CDATA[gitlab迁移恢复]]></title>
         <id>https://bibi520.github.io/post/gitlab-qian-yi-hui-fu/</id>
@@ -43,7 +813,7 @@ gitlab-secrets.json路径：/etc/gitlab/gitlab-secrets.json
 <ol>
 <li>关闭gitlab数据连接的某些服务<pre><code>gitlab-ctl stop unicorn
 gitlab-ctl stop sidekiq
-gitlab-ctl stop ngin
+gitlab-ctl stop nginx
 </code></pre>
 </li>
 <li>对备份文件进行赋权并并恢复，一定要在备份路径下执行恢复命令，不要带后面的英文字母，不然会报文件不存在<br>
@@ -142,701 +912,6 @@ spec:
 <li>Month：可出现&quot;,&quot;  &quot;_&quot;  &quot;*&quot;  &quot;/&quot;  这个四个字符串，有效范围为1~12的整数</li>
 <li>DayofWeek：可出现&quot;,&quot;  &quot;_&quot;  &quot;*&quot;  &quot;/&quot;  &quot;?&quot;  &quot;L&quot;  &quot;C&quot;  &quot;#&quot; 这个8个字符，有效范围为1~7的整数</li>
 </ul>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[tekton和triggers学习]]></title>
-        <id>https://bibi520.github.io/post/tekton-xue-xi/</id>
-        <link href="https://bibi520.github.io/post/tekton-xue-xi/">
-        </link>
-        <updated>2020-03-16T08:55:54.000Z</updated>
-        <content type="html"><![CDATA[<h3 id="tekton-5种资源">tekton 5种资源</h3>
-<table>
-<thead>
-<tr>
-<th style="text-align:center">名称</th>
-<th style="text-align:center">描述</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center"><a href="https://github.com/tektoncd/pipeline/blob/v0.11.0-rc2/docs/tasks.md">task</a></td>
-<td style="text-align:center">定义一系列运行任务</td>
-</tr>
-<tr>
-<td style="text-align:center"><a href="https://github.com/tektoncd/pipeline/blob/v0.11.0-rc2/docs/taskruns.md">TaskRun</a></td>
-<td style="text-align:center">task 实际的执行, 并提供执行所需的参数. 这个对象创建后, 就会有 pod 被创建.</td>
-</tr>
-<tr>
-<td style="text-align:center"><a href="https://github.com/tektoncd/pipeline/blob/v0.11.0-rc2/docs/pipelines.md">Pipeline</a></td>
-<td style="text-align:center">定义一个或者多个 task 的执行, 以及 PipelineResource 和各种定义参数的集合</td>
-</tr>
-<tr>
-<td style="text-align:center"><a href="https://github.com/tektoncd/pipeline/blob/v0.11.0-rc2/docs/resources.md">PipelineResource	</a></td>
-<td style="text-align:center">流水线的输入资源, 比如 github/gitlab 的源码, 某种存储服务的文件, 或者镜像等. 执行时, 也会作为 pod 的其中一个 container 来运行(比如拉取代码).</td>
-</tr>
-<tr>
-<td style="text-align:center"><a href="https://github.com/tektoncd/pipeline/blob/v0.11.0-rc2/docs/pipelineruns.md">PipelineRun</a></td>
-<td style="text-align:center">类似 task 和 taskrun 的关系: 一个定义一个执行. PipelineRun 则是 pipeline 的实际执行. 创建后也会创建 pod 来执行各个 task.</td>
-</tr>
-<tr>
-<td style="text-align:center">Condition</td>
-<td style="text-align:center">在 pipeline 的 task 执行时通过添加 condition 来对条件进行评估, 进而判断是否执行 task.</td>
-</tr>
-</tbody>
-</table>
-<h3 id="实例">实例</h3>
-<pre><code>apiVersion: tekton.dev/v1alpha1
-kind: Task
-metadata:
-  name: appweb-develop-task
-spec:
-  inputs:
-    resources:
-    - name: workspace
-      type: git
-  steps:
-  - name: node-install-build
-    image: node:latest
-    workingDir: /workspace/workspace
-    command: ['/bin/bash']
-    args: 
-    - -c
-    - |
-      npm i 
-      npm run build
-    volumeMounts:
-    - name: nms
-      mountPath: /workspace/workspace/node_modules
-    - name: docker-config
-      mountPath: /kaniko/.docker/
-  - name: docker-build
-    image: gcr.io/kaniko-project/executor:v0.17.1  
-    command:
-    - /kaniko/executor
-    args:
-    - --dockerfile=/workspace/workspace/Dockerfile
-    - --context=/workspace/workspace
-    - --destination=registry.us-west-1.aliyuncs.com/chocolate/base
-    - --insecure
-    securityContext:
-      runAsUser: 0
-  volumes:
-  - name: nms
-    hostPath:
-      path: /root/node_modules
-  - name: docker-config
-    configMap:
-      name: docker-config
----
-apiVersion: tekton.dev/v1alpha1
-kind: Pipeline
-metadata:
-  name: appweb-develop-pipeline
-spec:
-  resources:
-  - name: source-repo
-    type: git
-  tasks:
-  - name: flow
-    taskRef:
-      name: appweb-develop-task
-    resources:
-      inputs:
-      - name: workspace
-        resource: source-repo
----
-apiVersion: tekton.dev/v1alpha1
-kind: PipelineResource
-metadata:
-  name: appweb-develop-resource
-spec:
-  type: git
-  params:
-  - name: revision
-    value: develop
-  - name: url
-    value: http://x.x.x.x/web/ztime
----
-</code></pre>
-<h3 id="triggers"><a href="https://github.com/tektoncd/triggers">triggers</a> 四种资源</h3>
-<table>
-<thead>
-<tr>
-<th style="text-align:center">名称</th>
-<th style="text-align:center">描述</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center">TriggerTemplate</td>
-<td style="text-align:center">创建PipelineResources and PipelineRun的运行模板</td>
-</tr>
-<tr>
-<td style="text-align:center">TriggerBinding</td>
-<td style="text-align:center">验证或是提取拦截器返回的字段</td>
-</tr>
-<tr>
-<td style="text-align:center">EventListener</td>
-<td style="text-align:center">需要监听的git地址</td>
-</tr>
-<tr>
-<td style="text-align:center">ClusterTriggerBinding</td>
-<td style="text-align:center">同TriggerBinding一样，不同的是这个集群范围的</td>
-</tr>
-</tbody>
-</table>
-<p>实例：</p>
-<pre><code>---
-apiVersion: tekton.dev/v1alpha1
-kind: TriggerBinding
-metadata:
-  name: appweb-develop-pipeline-binding
-spec:
-  params:
-  - name: revision
-    value: $(body.ref)
-  - name: url
-    value: $(body.project.git_http_url)
----
-apiVersion: tekton.dev/v1alpha1
-kind: TriggerTemplate
-metadata:
-  name: appweb-develop-pipeline-template
-spec:
-  params:
-  - name: revision
-  - name: url
-  resourcetemplates:
-  - apiVersion: tekton.dev/v1alpha1
-    kind: PipelineRun
-    metadata:
-      generateName: appweb-develop-pipeline-run-
-    spec:
-      pipelineRef:
-        name: appweb-develop-pipeline
-      serviceAccountName: default
-      resources:
-      - name: source-repo
-        resourceRef:
-          name: appweb-develop-resource
-      params:
-      - name: uid
-        value: $(uid)
-
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: tekton-trigger
-secrets:
-  - name: default-token-752h4
-  - name: gitlab
-  - name: tekton-trigger-token-vbrc4 
----
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: tekton-trigger
-rules:
-# Permissions for every EventListener deployment to function
-- apiGroups: [&quot;tekton.dev&quot;]
-  resources: [&quot;eventlisteners&quot;, &quot;triggerbindings&quot;, &quot;triggertemplates&quot;,&quot;tasks&quot;,&quot;taskruns&quot;,&quot;pipelineruns&quot;]
-  verbs: [&quot;get&quot;,&quot;create&quot;]
-- apiGroups: [&quot;&quot;]
-  resources: [&quot;configmaps&quot;, &quot;secrets&quot;] # secrets are only needed for Github/Gitlab interceptors
-  verbs: [&quot;get&quot;, &quot;list&quot;, &quot;watch&quot;]
-# Permissions to create resources in associated TriggerTemplates
-- apiGroups: [&quot;tekton.dev&quot;]
-  resources: [&quot;pipelineruns&quot;, &quot;pipelineresources&quot;, &quot;taskruns&quot;]
-  verbs: [&quot;create&quot;,&quot;get&quot;]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: tekton-trigger
-subjects:
-- kind: ServiceAccount
-  name: tekton-trigger
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: tekton-trigger
-</code></pre>
-<p>创建一个EventListener：</p>
-<pre><code>---
-apiVersion: tekton.dev/v1alpha1
-kind: EventListener
-metadata:
-  name: listener-interceptor
-spec:
-  serviceAccountName: &quot;tekton-trigger&quot;
-  triggers:
-    - name: foo-trig
-      interceptors:
-        - gitlab:
-            secretRef:
-              secretName: x-gitlab-token
-              secretKey: gitlabToken
-            eventTypes:
-              - Push Hook
-      bindings:
-        - name: appweb-develop-pipeline-binding
-      template:
-        name: appweb-develop-pipeline-template
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: x-gitlab-token
-type: Opaque
-stringData:
-  gitlabToken: hello
-</code></pre>
-<p>上面secret的gitlab的token指的是钩子的Secret Token，gitlabToken的值如果不行就换成base64加密一下<br>
-<img src="https://bibi520.github.io/post-images/1584951102861.jpg" alt="" loading="lazy"></p>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[kubernetes亲和性]]></title>
-        <id>https://bibi520.github.io/post/kubernetes-qin-he-xing/</id>
-        <link href="https://bibi520.github.io/post/kubernetes-qin-he-xing/">
-        </link>
-        <updated>2020-03-13T03:00:27.000Z</updated>
-        <content type="html"><![CDATA[<h3 id="nodeaffinitynode亲和性调度">NodeAffinity：node亲和性调度</h3>
-<p>RequiredDuringSchedulingIgnoredDuringExecution：必须满足指定的规则才可以调度pod到node上（相当于硬限制）</p>
-<p>PreferredDuringSchedulingIgnoredDuringExecution：强调优先满足指定规则，调速器尝试调度pod到该node上，但并不强求，相当于软连接。多个优先级规则还可以设置权重（weight）值，以定义执行的先后顺序</p>
-<p>NodeAffinity规则设置注意事项：</p>
-<ol>
-<li>如果同时定义了nodeselector和Nodeaffinity，那么必须两个条件都得到满足，pod才能调度该node上去</li>
-<li>如果nodeaffinity指定了多个nodeselectorTerms，满足其中一个即可</li>
-<li>如果在nodeselectorTerms中有多个matchExpressions，则一个节点必须满足所有matchExpressions才能运行pod</li>
-</ol>
-<h3 id="podaffinitypod亲和性与互斥策略">PodAffinity：Pod亲和性与互斥策略</h3>
-<p>和节点的亲和性相同，pod亲和性与互斥的条件设置也是RequiredDuringSchedulingIgnoredDuringExecution和PreferredDuringSchedulingIgnoredDuringExecution</p>
-<p>PodAffinity规则注意事项：</p>
-<ol>
-<li>除了设置Label selector 和topologyKey，用户还可以指定namespace列表来进行限制，同样，使用Label selector 对namespace进行选择。namespace的定义和Label selector 及topology同级。省略Namespace的设置，表示使用定义了affinity和anti-affinity的pod所在的namespace。如何namespace被设置为控制(&quot;&quot;),则表示所有的namespace。</li>
-<li>在所有关联RequiredDuringSchedulingIgnoredDuringExecution的matchExpression全都满足之后，系统才能将pod调度都某个节点上。</li>
-</ol>
-<h3 id="下面是在这个节点上-只能存在一个标签为app-值等于efficientnet_watch_recognize的pod">下面是在这个节点上  只能存在一个标签为app 值等于efficientnet_watch_recognize的pod</h3>
-<pre><code>apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: efficientnet_watch_recognize
-  labels:
-    app: efficientnet_watch_recognize
-    version: master
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: efficientnet_watch_recognize
-      version: master
-  template:
-    metadata:
-      labels:
-        app: efficientnet_watch_recognize
-        version: master
-    spec:
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                - 10.0.1.5
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - efficientnet_watch_recognize
-            topologyKey: kubernetes.io/hostname
-      containers:
-      - name: efficientnet_watch_recognize
-        image: nginx
-        # ports:
-        # - containerPort: 8080
-        volumeMounts:
-        - mountPath: /persistentvolumes/logs
-          name: nfs_logs
-         - mountPath: /persistentvolumes/images
-          name: nfs_images
-#      nodeSelector:
-#        GPU: &quot;true&quot;
-      tolerations:
-      - key: &quot;GPU&quot;
-        operator: &quot;Equal&quot;
-        value: &quot;true&quot;
-        effect: &quot;NoSchedule&quot;
-      volumes:
-      - name: nfs_logs
-        nfs:
-          path: /logs
-          server: 10.0.1.31
-      - name: nfs_images
-        nfs:
-          path: /images
-          server: 10.0.1.31
-</code></pre>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[python爬取实例1]]></title>
-        <id>https://bibi520.github.io/post/python-pa-qu-tu-pian/</id>
-        <link href="https://bibi520.github.io/post/python-pa-qu-tu-pian/">
-        </link>
-        <updated>2020-03-12T08:57:46.000Z</updated>
-        <content type="html"><![CDATA[<h4 id="仅供学习参考">仅供学习参考</h4>
-<pre><code>import  requests,time,threading,os,random
-from lxml import etree
-from queue import Queue
-os.chdir('picture')
-headers = {
-    'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE'
-}
-# 创建一个先进先出队列
-detail_url_queue = Queue()
-
-#  抓取图片地址并下载
-def get_picture(queue):
-    while not detail_url_queue.empty():
-        url = queue.get()
-        print(url)
-        html = requests.get(url,headers=headers)
-        html.encoding = 'gbk'
-        selector = etree.HTML(html.text)
-        pic = selector.xpath('//ul[@class=&quot;clearfix&quot;]//li//img//@src')
-        for i in pic:
-            href = &quot;http://pic.netbian.com&quot;+ i
-            content = requests.get(href,headers=headers).content
-            with open('{}.jpg'.format(random.random()),'wb') as p:
-                p.write(content)
-# 获取图片列表页
-def get_url(queue):
-    for i in range(1,5000):
-        queue.put(&quot;http://pic.netbian.com/4kdongman/index_{}.html&quot;.format(i))
-
-if __name__ == &quot;__main__&quot;:
-    start_time = time.time()
-    t = threading.Thread(target=get_url(detail_url_queue)) #开启一个线程去抓取图片列表页
-    t2 = threading.Thread(target=get_picture(detail_url_queue)) #开启一个线程去抓取图片
-
-    t.start()
-    t2.start()
-
-    t.join()
-    t2.join()
-    print(&quot;last time: {} s&quot;.format(time.time()-start_time))
-</code></pre>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[linux命令]]></title>
-        <id>https://bibi520.github.io/post/linux-ming-ling/</id>
-        <link href="https://bibi520.github.io/post/linux-ming-ling/">
-        </link>
-        <updated>2020-03-12T03:29:05.000Z</updated>
-        <content type="html"><![CDATA[<h4 id="auditctl用于配置与审计相关的内核选项">auditctl用于配置与审计相关的内核选项</h4>
-<table>
-<thead>
-<tr>
-<th style="text-align:center">参数</th>
-<th style="text-align:center">作用</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center">-w</td>
-<td style="text-align:center">需要监控的文件或是命令</td>
-</tr>
-<tr>
-<td style="text-align:center">-p</td>
-<td style="text-align:center">指定监控属性</td>
-</tr>
-<tr>
-<td style="text-align:center">-k</td>
-<td style="text-align:center">设置一个关键字用于查询</td>
-</tr>
-</tbody>
-</table>
-<h4 id="ausearch查看审计日志">ausearch查看审计日志</h4>
-<table>
-<thead>
-<tr>
-<th style="text-align:center">参数</th>
-<th style="text-align:center">作用</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center">-a</td>
-<td style="text-align:center">只显示id为指定数字的日志信息</td>
-</tr>
-<tr>
-<td style="text-align:center">-c</td>
-<td style="text-align:center">只显示和命令相关的信息</td>
-</tr>
-<tr>
-<td style="text-align:center">-i</td>
-<td style="text-align:center">显示详细信息</td>
-</tr>
-<tr>
-<td style="text-align:center">-k</td>
-<td style="text-align:center">查看带有关键字的信息</td>
-</tr>
-</tbody>
-</table>
-<h4 id="nmap扫描端口">nmap扫描端口</h4>
-<table>
-<thead>
-<tr>
-<th style="text-align:center">参数</th>
-<th style="text-align:center">作用</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:center">-sT</td>
-<td style="text-align:center">TCP connect()扫描，这种方式会在目标主机的日志中记录大批连接请求和错误信息</td>
-</tr>
-<tr>
-<td style="text-align:center">-sS</td>
-<td style="text-align:center">半开扫描，很少有系统能把它记入系统日志。不过，需要Root权限</td>
-</tr>
-<tr>
-<td style="text-align:center">-sF -sN</td>
-<td style="text-align:center">秘密FIN数据包扫描、Xmas Tree、Nll描模式</td>
-</tr>
-<tr>
-<td style="text-align:center">-sP</td>
-<td style="text-align:center">ping扫描，Nmap在扫描端口时，默认都会使用ping扫描，只有主机存活，Nmap才会继续扫描</td>
-</tr>
-<tr>
-<td style="text-align:center">-sU</td>
-<td style="text-align:center">UDP扫描，但UDP扫描是不可靠的</td>
-</tr>
-<tr>
-<td style="text-align:center">-sA</td>
-<td style="text-align:center">这项高级的扫描方法通常用来穿过防火墙的规则集</td>
-</tr>
-<tr>
-<td style="text-align:center">-sV</td>
-<td style="text-align:center">探测端口服务版本</td>
-</tr>
-<tr>
-<td style="text-align:center">-Pn</td>
-<td style="text-align:center">扫描之前不需要用ping命令，有些防火墙禁止ping命令。可以使用此选项进行扫描</td>
-</tr>
-<tr>
-<td style="text-align:center">-p</td>
-<td style="text-align:center">指定端口如&quot;1-65535、 1433、135、 22、80等</td>
-</tr>
-<tr>
-<td style="text-align:center">-r</td>
-<td style="text-align:center">使用“-r”选项表示不会随机的选择端口扫描</td>
-</tr>
-<tr>
-<td style="text-align:center">--iflist</td>
-<td style="text-align:center">检测主机接口和路由信息</td>
-</tr>
-<tr>
-<td style="text-align:center">-PA ,-PS</td>
-<td style="text-align:center">使用TCP ACK和TCP Syn方法来扫描远程主机</td>
-</tr>
-</tbody>
-</table>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[helm搭建istio1.5]]></title>
-        <id>https://bibi520.github.io/post/helm-da-jian-istio15/</id>
-        <link href="https://bibi520.github.io/post/helm-da-jian-istio15/">
-        </link>
-        <updated>2020-03-11T03:19:12.000Z</updated>
-        <content type="html"><![CDATA[<h4 id="准备好kubernetes和helm搭建过程略过">准备好kubernetes和helm（搭建过程略过）</h4>
-<h4 id="1下载istio安装包">1.下载istio安装包</h4>
-<p><code>curl -L https://istio.io/downloadIstio | sh -</code></p>
-<h4 id="2安装istio所需的要的crd以为这个我开启了自动签发证书所以要把certmanager开启">2.安装istio所需的要的CRD(以为这个我开启了自动签发证书，所以要把certmanager开启)</h4>
-<p><code>helm install install/kubernetes/helm/istio-init --name istio-init --namespace istio-system --set certmanager.enabled=true</code></p>
-<h4 id="3安装sitio-cni网络插件">3.安装sitio-cni网络插件</h4>
-<p><code>helm install install/kubernetes/helm/istio-cni --name istio-cni --namespace kube-system</code></p>
-<h4 id="4配置kiali和grafana用户和密码-官方例子">4.配置kiali和grafana用户和密码, <a href="https://istio.io/docs/tasks/observability/kiali/">官方例子</a></h4>
-<pre><code class="language-apiVersion:">kind: Secret
-metadata:
-  name: kiali
-  namespace: istio-system
-  labels:
-    app: kiali
-type: Opaque
-data:
-  username: YWRtaW4=
-  passphrase: Y2hhbXBzYTg4OA==
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: grafana
-  namespace: istio-system
-  labels:
-    app: grafana
-type: Opaque
-data:
-  username: YWRtaW4=
-  passphrase: Y2hhbXBzYTg4OA==
-</code></pre>
-<h4 id="5安装过istio这里设置好的参数可以到官网查看含义">5.安装过istio这里设置好的参数可以到<a href="https://istio.io/docs/reference/config/installation-options/">官网</a>查看含义</h4>
-<p><code>helm install install/kubernetes/helm/istio --name istio --namespace istio-system --set istio_cni.enabled=true --set global.disablePolicyChecks=false --set global.k8sIngress.enabled=true --set global.k8sIngress.enableHttps=true --set global.k8sIngress.gatewayName=ingressgateway --set security.citadelHealthCheck=true --set gateways.enabled=true --set gateways.istio-egressgateway.enabled=true --set gateways.istio-ingressgateway.enabled=true --set gateways.istio-ingressgateway.sds.enabled=true --set certmanager.enabled=true --set certmanager.email=txy@cztec.com --set grafana.enabled=true --set grafana.security.enabled=true --set grafana.security.usernameKey=username --set kiali.enabled=true --set grafana.security.passphraseKey=passphrase --set tracing.enabled=true --set prometheus.enabled=true</code></p>
-<h4 id="6签发范域名证书得先把域名解析到istio-ingressgateway服务的外部地址">6.签发范域名证书(得先把域名解析到istio-ingressgateway服务的外部地址)</h4>
-<pre><code>apiVersion: cert-manager.io/v1alpha2
-kind: Certificate
-metadata:
- name: ingress-cert
- namespace: istio-system
-spec:
- secretName: ingress-cert
- issuerRef:
-   name: letsencrypt
-   kind: ClusterIssuer
- commonName: $INGRESS_DOMAIN
- dnsNames:
- - $INGRESS_DOMAIN
- acme:
-   config:
-   - http01:
-       ingressClass: istio
-     domains:
-     - $INGRESS_DOMAIN
-</code></pre>
-<h4 id="检查签发成功的证书官方例子">检查签发成功的证书,<a href="https://istio.io/docs/tasks/traffic-management/ingress/ingress-certmgr/#getting-a-let-s-encrypt-certificate-issued-using-cert-manager">官方例子</a></h4>
-<p><code>kubectl get certificate</code><br>
-<img src="https://bibi520.github.io/post-images/1583908683044.jpg" alt="" loading="lazy"></p>
-<h4 id="7网关使用证书">7.网关使用证书</h4>
-<pre><code>apiVersion: networking.istio.io/v1alpha3
-kind: Gateway
-metadata:
-  name: kiali-gateway
-  namespace: istio-system
-spec:
-  selector:
-    istio: ingressgateway
-  servers:
-  - port:
-      number: 443
-      name: https-kiali
-      protocol: HTTPS
-    tls:
-      mode: SIMPLE
-      serverCertificate: sds
-      privateKey: sds
-      credentialName: kiali-ingress-cert
-    hosts:
-    - &quot;xxx.example.com&quot;
-</code></pre>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[docker-compose基础语法]]></title>
-        <id>https://bibi520.github.io/post/docker-compose-ji-chu-yu-fa/</id>
-        <link href="https://bibi520.github.io/post/docker-compose-ji-chu-yu-fa/">
-        </link>
-        <updated>2020-03-10T06:29:56.000Z</updated>
-        <content type="html"><![CDATA[<table>
-<thead>
-<tr>
-<th style="text-align:left">参数</th>
-<th style="text-align:center">用途</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left">version</td>
-<td style="text-align:center">指定docker-compose版本号</td>
-</tr>
-<tr>
-<td style="text-align:left">services</td>
-<td style="text-align:center">定义容器服务名字</td>
-</tr>
-<tr>
-<td style="text-align:left">image</td>
-<td style="text-align:center">指定服务的镜像</td>
-</tr>
-<tr>
-<td style="text-align:left">command</td>
-<td style="text-align:center">启动后指定的命令</td>
-</tr>
-<tr>
-<td style="text-align:left">container_name</td>
-<td style="text-align:center">定义容器名字</td>
-</tr>
-<tr>
-<td style="text-align:left">depends_on</td>
-<td style="text-align:center">解决容器依赖、先后启动问题</td>
-</tr>
-<tr>
-<td style="text-align:left">network</td>
-<td style="text-align:center">容器网络定义</td>
-</tr>
-<tr>
-<td style="text-align:left">port</td>
-<td style="text-align:center">容器映射的端口</td>
-</tr>
-<tr>
-<td style="text-align:left">volume</td>
-<td style="text-align:center">挂载卷</td>
-</tr>
-<tr>
-<td style="text-align:left">labels</td>
-<td style="text-align:center">定义标签</td>
-</tr>
-<tr>
-<td style="text-align:left">extra_hosts</td>
-<td style="text-align:center">往host文件写入主机名</td>
-</tr>
-<tr>
-<td style="text-align:left">network_mode</td>
-<td style="text-align:center">容器网络模式</td>
-</tr>
-<tr>
-<td style="text-align:left">environment</td>
-<td style="text-align:center">设置环境变量</td>
-</tr>
-<tr>
-<td style="text-align:left">resources</td>
-<td style="text-align:center">资源限制</td>
-</tr>
-<tr>
-<td style="text-align:left">healthcheck</td>
-<td style="text-align:center">健康检查机制</td>
-</tr>
-<tr>
-<td style="text-align:left">logging</td>
-<td style="text-align:center">配置日志服务</td>
-</tr>
-</tbody>
-</table>
-<p>还有很多  这里就不一一列举了 有兴趣的朋友可以去<a href="https://github.com/docker/docker.github.io/blob/master/compose/compose-file/index.md#deploy">github</a>查看</p>
-]]></content>
-    </entry>
-    <entry>
-        <title type="html"><![CDATA[certbot签发范域名证书]]></title>
-        <id>https://bibi520.github.io/post/certbot-qian-fa-fan-yu-ming-zheng-shu/</id>
-        <link href="https://bibi520.github.io/post/certbot-qian-fa-fan-yu-ming-zheng-shu/">
-        </link>
-        <updated>2020-03-10T03:29:31.000Z</updated>
-        <content type="html"><![CDATA[<h5 id="cerbot签发范域名证书中途还要做一次txt解析">cerbot签发范域名证书，中途还要做一次txt解析</h5>
-<p><code>certbot certonly --manual --email xxx@qq.com --server https://acme-v02.api.letsencrypt.org/directory --agree-tos -d *.xx.com</code></p>
-<h4 id="续签如报一下错误">续签如报一下错误:</h4>
-<p>The manual plugin is not working; there may be problems with your existing configuration ......<br>
-.....<br>
-PluginError('An authentication script must be provided with --manual-auth-hook when using the manual plugin non-interactively.'</p>
-<h4 id="解决方式说白了就是重新申请">解决方式（说白了就是重新申请）</h4>
-<p><code>certbot certonly -d *.xxx.com --manual --preferred-challenges dns --server https://acme-v02.api.letsencrypt.org/directory</code></p>
 ]]></content>
     </entry>
 </feed>
